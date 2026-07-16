@@ -55,7 +55,8 @@ class DerivaTemporalMixin:
         chaves = self._chaves_cartografia_contextual_eventos(
             list(sub_num)[-12:], list(sub_pol)[-12:], evento
         )
-        prefixo = f"REGRA_CTX|E={reg    # 3. _chaves_deriva_temporal_cenario
+        prefixo = f"REGRA_CTX|E={regra_id}"
+
     def _mapear_deriva_temporal_basica(self, dados, chaves_alvo):
         """Conta os cenários relevantes separando resolução em G0 e até G1."""
         resultado = {
