@@ -11,6 +11,9 @@ from .risco import RiscoMixin
 from .padroes import PadroesMixin
 from .deriva_temporal import DerivaTemporalMixin
 from .machine_learning import MachineLearningMixin
+from .evolucao import EvolucaoMixin
+from .comportamento import ComportamentoMixin
+from .probabilidades import ProbabilidadesMixin
 
 # Utilitários e Configurações necessárias
 from config.settings import VERSAO_CHAVES_HASH
@@ -22,6 +25,7 @@ from utils.helpers import (
 )
 
 class IAPreditivaV1(
+    
     QLearningMixin, 
     MarkovMixin, 
     CartografiaMixin, 
@@ -31,6 +35,7 @@ class IAPreditivaV1(
     PadroesMixin, 
     DerivaTemporalMixin, 
     MachineLearningMixin
+, EvolucaoMixin, ComportamentoMixin, ProbabilidadesMixin
 ):
     """
     O Cérebro Central do Motor V1. 
