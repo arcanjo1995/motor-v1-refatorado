@@ -1,4 +1,3 @@
-# meu_motor/rules/motor_analise.py
 from rules.analisador_contexto import AnalisadorContextoAvancado
 from rules.contagens import MotorContagensProjetivas
 from rules.motor_nocall import MotorNoCall
