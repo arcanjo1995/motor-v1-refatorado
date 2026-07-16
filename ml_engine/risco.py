@@ -5,7 +5,7 @@ class RiscoMixin:
     """
     Mixin para Filtros Discriminativos, Risco G2+ e Conflitos.
     """
-   def _chave_conflito(self, expectations, geometria, modo_mercado, probabilidade_markov):
+    def _chave_conflito(self, expectations, geometria, modo_mercado, probabilidade_markov):
         peso_v = 0
         peso_p = 0
         for item in expectations or []:
