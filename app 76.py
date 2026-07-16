@@ -4,14 +4,19 @@ from datetime import datetime
 import json
 import gc
 
-from main import LeitorXLS
-from main import MotorV1Completo
-from main import adicionar_a_base_longo_prazo
-from main import carregar_modelo_longo_prazo
-from main import motor_unificado
-from main import EngineMatematicoAvancado
-from main import NOME_BASE_DEFINITIVA
-from main import MotorContagensProjetivas
+# ---------------------------------------------------------
+# IMPORTAÇÕES DA NOVA ARQUITETURA MODULAR
+# ---------------------------------------------------------
+from config.settings import NOME_BASE_DEFINITIVA
+from data.leitor_xls import LeitorXLS
+from data.persistence import carregar_modelo_longo_prazo
+from utils.math_engine import EngineMatematicoAvancado
+from rules.contagens import MotorContagensProjetivas
+
+# Importação dos Serviços
+from services.motor_unificado import motor_unificado
+from services.auditoria import MotorV1Completo
+from services.treinador import adicionar_a_base_longo_prazo
 
 # ============================================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -698,5 +703,4 @@ with aba_matematica:
             st.metric(label="House Edge Mapeado", value=simulacao_stake.get("house_edge_estatico"))
     except Exception as e:
         st.error(f"🚨 Proteção de Crash Ativada no Simulador de Cobertura: {e}")
-
 
