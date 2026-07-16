@@ -908,7 +908,8 @@ class IAPreditivaV1(
             self._validar_regras_posicionais_cronologica(todos_dados)
             self._validar_competencia_camadas_ampliadas_cronologica(todos_dados)
             self._treinar_risco_g2_mais_base_longa()
-            self._treinar_ml_avancado(
+            self._treinar_ml_avancado(todos_dados) # ADICIONE "todos_dados)" PARA FECHAR A FUNÇÃO AQUI
+
     def construir_cadeia_causal_consequencia(self, sub_num, sub_pol, expectativas=None):
         """
         Materializa origem -> sustentador -> assunção -> controlador ->
