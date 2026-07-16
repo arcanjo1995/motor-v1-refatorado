@@ -1,29 +1,3 @@
-# rules/contagens.py
-
-class MotorContagensProjetivas:
-    """
-    Motor oficial de contagens e cenários estruturais.
-
-    Regras são EVIDÊNCIAS contextuais, não verdades absolutas. O mesmo número
-    pode produzir efeitos diferentes em estruturas diferentes. Todas as
-    evidências válidas coexistem e seguem para a arbitragem hierárquica.
-    """
-
-    REGRAS_PROJECAO = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
-    CONTINUIDADE_PRETA = {(8,9), (9,10), (10,11), (11,12), (12,13), (13,14), (14,13), (13,12), (12,11), (11,10)}
-    CONTINUIDADE_VERMELHA = {(1,2), (2,3), (3,4), (4,5), (5,6), (6,7), (7,6), (6,5), (5,4), (4,3)}
-
-    @staticmethod
-    def _adicionar(lista, direcao, tipo, origem, peso="MEDIO", familia="CONTAGENS_OFICIAIS", **extras):
-        item = {
-            "direcao": direcao, "tipo_regra": tipo, "origem": origem,
-            "peso": peso, "familia": familia
-        }
-        item.update(extras)
-        lista.append(item)
-
-    @classmethod
-    def _mapear_contagens(cls, sub_num, sub_pol):
 class MotorContagensProjetivas:
     """
     Motor oficial de contagens e cenários estruturais.
