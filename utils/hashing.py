@@ -1,8 +1,5 @@
-# utils/hashing.py
 import hashlib
 from collections import defaultdict
-
-VERSAO_CHAVES_HASH = 1  # importado de config, mas mantido localmente para evitar ciclo
 
 def hash_chave(chave):
     """Compacta chaves textuais longas das memórias de alta cardinalidade."""
@@ -25,7 +22,6 @@ def _mesclar_mapa_hash(mapa, campos=None):
                         convertido[chave_final][campo] = convertido[chave_final].get(campo, 0) + numero
     return convertido
 
-# Fábricas de estruturas de dados
 def fabrica_padrao_detalhado():
     return {
         "total": 0, "apos_V": 0, "apos_P": 0, "apos_B": 0,
