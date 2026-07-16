@@ -7,15 +7,6 @@ class JuizHierarquicoModificado:
 
     @staticmethod
     def _nivel_regra(regra, ia_modelo=None):
-   class JuizHierarquicoModificado:
-    """
-    MAIN 114 — Juiz da Hierarquia Oficial do MOTOR V1.
-    Não soma votos, famílias ou quantidade de evidências. O primeiro nível
-    hierárquico válido e resolvido encerra a busca direcional.
-    """
-
-    @staticmethod
-    def _nivel_regra(regra, ia_modelo=None):
         if ia_modelo is not None and hasattr(ia_modelo, "_nivel_hierarquico_regra"):
             return ia_modelo._nivel_hierarquico_regra(regra)
         tipo = str((regra or {}).get("tipo_regra", "")).upper()
