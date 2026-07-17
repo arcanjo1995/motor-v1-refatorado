@@ -1,5 +1,7 @@
+from collections import defaultdict
 from utils.helpers import hash_chave
 from rules.analisador import AnalisadorContextoAvancado
+from config.settings import VERSAO_CHAVES_HASH
 
 class RiscoMixin:
     """
