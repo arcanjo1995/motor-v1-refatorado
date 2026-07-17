@@ -1,3 +1,4 @@
+import numpy as np
 from collections import defaultdict
 from utils.helpers import hash_chave
 from rules.analisador import AnalisadorContextoAvancado
