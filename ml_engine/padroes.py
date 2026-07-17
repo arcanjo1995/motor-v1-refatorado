@@ -10,7 +10,8 @@ class PadroesMixin:
 
     def _garantir_padrao_info(self, dicionario, chave):
         """
-        Garante que a chave exista no dicionário com a estrutura padrão.
+        Garante que a chave exista no dicionário com a estrutura padrão,
+        e que 'quebradores' seja um defaultdict(int).
         """
         if chave not in dicionario:
             dicionario[chave] = {
@@ -23,6 +24,10 @@ class PadroesMixin:
                 "g1": 0,
                 "_futuros": []
             }
+        else:
+            info = dicionario[chave]
+            if 'quebradores' not in info or not isinstance(info['quebradores'], defaultdict):
+                info['quebradores'] = defaultdict(int)
         return dicionario[chave]
 
     def _garantir_quebradores_defaultdict(self, info):
