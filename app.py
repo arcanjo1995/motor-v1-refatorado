@@ -5,7 +5,7 @@ import json
 import gc
 
 # ---------------------------------------------------------
-# IMPORTAÇÕES DA NOVA ARQUITETURA MODULAR
+# IMPORTAÇÕES
 # ---------------------------------------------------------
 from config.settings import NOME_BASE_DEFINITIVA
 from data.leitor_xls import LeitorXLS
@@ -28,70 +28,90 @@ st.set_page_config(
 )
 
 # ============================================================
-# CSS PERSONALIZADO
+# CSS PERSONALIZADO – LAYOUT RESPONSIVO SEM CORTES
 # ============================================================
 st.markdown("""
 <style>
-    /* Reset de margens */
+    /* Reset de espaçamentos */
     .block-container {
-        padding-top: 1rem;
-        padding-bottom: 0rem;
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+        max-width: 1200px;
+        margin: 0 auto;
     }
-    /* Cards de status horizontal */
-    .status-card {
+    /* Cards de status – flexíveis e sem quebra */
+    .status-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+    .status-item {
+        flex: 1 1 150px;
         background: white;
-        border-radius: 10px;
-        padding: 0.8rem 1rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        border-left: 4px solid #4CAF50;
+        border-radius: 8px;
+        padding: 0.4rem 0.6rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         text-align: center;
+        border-left: 4px solid #28a745;
+        min-width: 120px;
     }
-    .status-card .label {
-        font-size: 0.7rem;
+    .status-item .label {
+        font-size: 0.65rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
         color: #6c757d;
+        font-weight: 600;
     }
-    .status-card .value {
-        font-size: 1.1rem;
+    .status-item .value {
+        font-size: 1rem;
         font-weight: 700;
         color: #1a1a2e;
+        margin-top: 0.1rem;
     }
-    /* Card de resultado do sinal */
+    /* Card do sinal */
     .signal-result {
         background: #f8f9fa;
         border-radius: 12px;
-        padding: 1.5rem;
+        padding: 1.2rem 1.5rem;
         border: 1px solid #e9ecef;
-        margin: 1rem 0;
+        margin: 0.5rem 0 1rem 0;
     }
     .signal-badge {
         display: inline-block;
-        padding: 0.4rem 1.5rem;
+        padding: 0.3rem 1.2rem;
         border-radius: 30px;
         font-weight: 700;
-        font-size: 1.3rem;
+        font-size: 1.2rem;
     }
     .signal-vermelho { background: #dc3545; color: white; }
     .signal-preto { background: #212529; color: white; }
     .signal-no-call { background: #ffc107; color: #212529; }
     .signal-neutro { background: #6c757d; color: white; }
-    /* Expanders com título em negrito */
+    /* Expanders mais compactos */
     .streamlit-expanderHeader {
         font-weight: 600;
-        color: #1a1a2e;
+        font-size: 0.9rem;
+        padding: 0.3rem 0.5rem;
     }
-    /* Footer */
+    .streamlit-expanderContent {
+        padding: 0.2rem 0.5rem 0.5rem 0.5rem;
+    }
+    /* Rodapé */
     .footer {
-        margin-top: 2rem;
-        padding-top: 1rem;
+        margin-top: 1.5rem;
+        padding-top: 0.8rem;
         border-top: 1px solid #e9ecef;
         text-align: center;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: #6c757d;
     }
-    /* Remover espaçamento extra do sidebar */
-    .css-1d391kg { padding-top: 1rem; }
+    /* Ajuste para telas pequenas */
+    @media (max-width: 768px) {
+        .status-item { flex: 1 1 100px; }
+        .signal-badge { font-size: 1rem; padding: 0.2rem 1rem; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -108,49 +128,49 @@ if "motor_v1" not in st.session_state:
 motor = st.session_state.motor_v1
 
 # ============================================================
-# 1. BARRA DE STATUS HORIZONTAL (TOPO)
+# BARRA DE STATUS – USANDO COLUNAS FIXAS PARA EVITAR CORTES
 # ============================================================
 try:
     status = motor.status()
 except:
     status = {}
 
-st.markdown("### 🧠 Motor V1 — Status Operacional")
-col_s1, col_s2, col_s3, col_s4, col_s5 = st.columns(5)
-with col_s1:
+st.markdown("### 🧠 Motor V1 — Status")
+col1, col2, col3, col4, col5 = st.columns(5, gap="small")
+with col1:
     status_text = "🟢 ATIVA" if status.get("ia_carregada") else "🔴 INATIVA"
     st.markdown(f"""
-    <div class="status-card" style="border-left-color: {'#28a745' if status.get('ia_carregada') else '#dc3545'};">
+    <div class="status-item" style="border-left-color: {'#28a745' if status.get('ia_carregada') else '#dc3545'};">
         <div class="label">IA Preditiva</div>
         <div class="value">{status_text}</div>
     </div>
     """, unsafe_allow_html=True)
-with col_s2:
+with col2:
     status_text = "✅ CARREGADA" if status.get("base_longa_carregada") else "❌ NÃO DETECTADA"
     st.markdown(f"""
-    <div class="status-card" style="border-left-color: {'#28a745' if status.get('base_longa_carregada') else '#ffc107'};">
+    <div class="status-item" style="border-left-color: {'#28a745' if status.get('base_longa_carregada') else '#ffc107'};">
         <div class="label">Base Longa</div>
         <div class="value">{status_text}</div>
     </div>
     """, unsafe_allow_html=True)
-with col_s3:
+with col3:
     status_text = "⚡ ATIVA" if status.get("recencia_injetada") else "⏳ AGUARDANDO"
     st.markdown(f"""
-    <div class="status-card" style="border-left-color: {'#17a2b8' if status.get('recencia_injetada') else '#6c757d'};">
+    <div class="status-item" style="border-left-color: {'#17a2b8' if status.get('recencia_injetada') else '#6c757d'};">
         <div class="label">Recência (Peso 6)</div>
         <div class="value">{status_text}</div>
     </div>
     """, unsafe_allow_html=True)
-with col_s4:
+with col4:
     st.markdown(f"""
-    <div class="status-card" style="border-left-color: #6f42c1;">
+    <div class="status-item" style="border-left-color: #6f42c1;">
         <div class="label">Base Mestra</div>
         <div class="value">{status.get('volume_longo_prazo', 0)} Giros</div>
     </div>
     """, unsafe_allow_html=True)
-with col_s5:
+with col5:
     st.markdown(f"""
-    <div class="status-card" style="border-left-color: #fd7e14;">
+    <div class="status-item" style="border-left-color: #fd7e14;">
         <div class="label">Memória Imediata</div>
         <div class="value">{status.get('volume_recencia', 0)} Giros</div>
     </div>
@@ -159,27 +179,26 @@ with col_s5:
 st.markdown("---")
 
 # ============================================================
-# 2. SIDEBAR (LIMPA E COMPACTA)
+# SIDEBAR – MENU DE ABAS
 # ============================================================
 with st.sidebar:
     st.markdown("## ⚙️ Navegação")
     aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
         "🎯 Sinal", "✅ Feedback", "📊 Auditoria", "📈 Padrões", "🧮 Cálculos"
     ])
-    
     st.markdown("---")
     if status.get("ultima_atualizacao"):
         st.caption(f"🕒 Último sync: {status.get('ultima_atualizacao')}")
     st.caption("v2.0 · Motor Refatorado")
 
 # ============================================================
-# 3. ABA 1 — SINAL REAL (REFORMULADA)
+# ABA 1 — SINAL REAL
 # ============================================================
 with aba_tipo_b:
     st.header("🎯 Sinal Real — Predição Neural")
     
-    # Layout de entrada em duas colunas
-    col_entrada, col_metrica = st.columns([2, 1])
+    # Entrada e métrica rápida lado a lado
+    col_entrada, col_metrica = st.columns([3, 1], gap="medium")
     with col_entrada:
         entrada_numeros = st.text_input(
             "Digite os 12 últimos números (separados por vírgula):",
@@ -188,34 +207,32 @@ with aba_tipo_b:
             label_visibility="collapsed"
         )
         btn_gerar = st.button("🚀 Executar Rede Neural", use_container_width=True, type="primary")
-    
     with col_metrica:
-        st.caption("📊 Pré-análise rápida")
+        st.caption("📊 Pré-análise")
         if entrada_numeros:
             try:
                 nums = [int(x) for x in entrada_numeros.replace(';', ',').replace('-', ',').replace(' ', '').split(",") if x.isdigit()]
                 if len(nums) == 12:
-                    polaridades = ['B' if n == 0 else ('V' if 1 <= n <= 7 else 'P') for n in nums]
-                    entropia = EngineMatematicoAvancado.calcular_entropia_shannon(polaridades)
+                    pol = ['B' if n == 0 else ('V' if 1 <= n <= 7 else 'P') for n in nums]
+                    entropia = EngineMatematicoAvancado.calcular_entropia_shannon(pol)
                     st.metric("Entropia Estimada", f"{entropia:.2f} Bits", delta="Caos" if entropia > 1.52 else "Estruturado", delta_color="inverse")
             except:
                 pass
 
-    # Processamento do sinal
     if btn_gerar:
         if not entrada_numeros:
             st.error("Por favor, insira uma sequência válida.")
         else:
             try:
-                raw_str = str(entrada_numeros).replace(';', ',').replace('-', ',').replace(' ', '')
-                lista_numeros = [int(x) for x in raw_str.split(",") if x.isdigit()]
-                
+                raw = entrada_numeros.replace(';', ',').replace('-', ',').replace(' ', '')
+                lista_numeros = [int(x) for x in raw.split(",") if x.isdigit()]
                 if len(lista_numeros) != 12:
                     st.error(f"Erro: Exatamente 12 números são necessários. Você enviou {len(lista_numeros)}.")
                 else:
                     resultado = motor.gerar_sinal_tipo_b(lista_numeros)
                     polaridades = ['B' if n == 0 else ('V' if 1 <= n <= 7 else 'P') for n in lista_numeros]
 
+                    # Guarda para feedback
                     st.session_state.ultimo_sinal = {
                         "sequencia": lista_numeros,
                         "sinal": resultado.get("sinal", "NEUTRO"),
@@ -226,11 +243,11 @@ with aba_tipo_b:
                     }
 
                     st.markdown("---")
-                    
-                    # Card de resultado
                     st.markdown("### 🔮 Card de Decisão")
+                    
+                    # Card do resultado
                     with st.container():
-                        col_res1, col_res2 = st.columns([2, 1])
+                        col_res1, col_res2 = st.columns([2, 1], gap="medium")
                         with col_res1:
                             if resultado.get("no_call"):
                                 st.markdown("<div class='signal-badge signal-no-call'>⚠️ NO CALL</div>", unsafe_allow_html=True)
@@ -243,7 +260,6 @@ with aba_tipo_b:
                                     st.markdown("<div class='signal-badge signal-preto'>⚫ ENTRAR NO PRETO</div>", unsafe_allow_html=True)
                                 else:
                                     st.markdown(f"<div class='signal-badge signal-neutro'>⚪ {sinal}</div>", unsafe_allow_html=True)
-                                
                                 st.write(f"**Direcionamento:** {resultado.get('justificativa')}")
                                 st.write(f"**Confiança da Rede:** {resultado.get('confianca_ia')}%")
                         with col_res2:
@@ -251,13 +267,12 @@ with aba_tipo_b:
                                 st.metric("Entropia (Shannon)", f"{resultado.get('entropia', 0):.2f} Bits")
                             markov = resultado.get("probabilidade_markov", {})
                             st.caption(f"Markov: V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
-                            
                             if resultado.get("regime_recencia"):
-                                regime = resultado["regime_recencia"]
-                                st.caption(f"Regime: {regime.get('modo_dominante', 'N/D')} | Viés: {regime.get('viés_atual', 'N/D')}")
+                                reg = resultado["regime_recencia"]
+                                st.caption(f"Regime: {reg.get('modo_dominante', 'N/D')}")
 
-                    # Expansores organizados em duas colunas
-                    col_exp1, col_exp2 = st.columns(2)
+                    # Expansores em duas colunas equilibradas
+                    col_exp1, col_exp2 = st.columns(2, gap="medium")
                     
                     with col_exp1:
                         with st.expander("📊 Regime de Recência", expanded=False):
@@ -269,15 +284,15 @@ with aba_tipo_b:
                         with st.expander("🧮 Análise de Raridade", expanded=False):
                             raridade = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
                             st.write(f"**Streak:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
-                            st.write(f"**Probabilidade de continuação:** {raridade.get('probabilidade')}%")
+                            st.write(f"**Prob. continuação:** {raridade.get('probabilidade')}%")
                             st.info(f"**Status:** {raridade.get('status')}")
                         
                         with st.expander("🔍 Auditoria de Raciocínio (Camadas)", expanded=False):
                             if resultado.get("raciocinio_trace"):
-                                for camada in resultado["raciocinio_trace"][-3:]:  # Últimas camadas são as mais importantes
+                                for camada in resultado["raciocinio_trace"][-4:]:
                                     st.markdown(f"**Camada {camada.get('camada')} — {camada.get('nome')}**")
                                     st.write(f"*{camada.get('resultado')}*")
-                                    st.caption(camada.get('detalhe', ''))
+                                    st.caption(camada.get('detalhe', '')[:250] + "..." if len(camada.get('detalhe', '')) > 250 else camada.get('detalhe', ''))
                                     st.markdown("---")
                             else:
                                 st.info("Nenhum trace disponível.")
@@ -289,18 +304,21 @@ with aba_tipo_b:
                                     lista_numeros, polaridades, None, getattr(motor, "ia", None)
                                 )
                                 if regras:
-                                    for r in regras[:5]:  # Limita a 5 para não poluir
+                                    for r in regras[:5]:
                                         direcao = r.get("direcao", "NEUTRO")
                                         emoji = "🔴" if direcao == "VERMELHO" else ("⚫" if direcao == "PRETO" else "⚪")
                                         st.write(f"{emoji} **{r.get('tipo_regra')}** — *{r.get('familia')}*")
+                                    if len(regras) > 5:
+                                        st.caption(f"... e mais {len(regras)-5} regras")
                                 else:
                                     st.info("Nenhuma regra ativa.")
                             except Exception as e:
-                                st.warning(f"Erro ao carregar regras: {e}")
+                                st.warning(f"Erro: {e}")
                         
                         with st.expander("📈 Simulação de Rotas (Próximos Resultados)", expanded=False):
-                            if resultado.get("simulacao_rotas_proximos_resultados", {}).get("ativo"):
-                                st.json(resultado["simulacao_rotas_proximos_resultados"])
+                            sim = resultado.get("simulacao_rotas_proximos_resultados", {})
+                            if sim.get("ativo"):
+                                st.json(sim)
                             else:
                                 st.info("Simulação não disponível para esta janela.")
 
@@ -308,7 +326,7 @@ with aba_tipo_b:
                 st.error(f"Erro ao gerar sinal: {e}")
 
 # ============================================================
-# 4. ABA 2 — FEEDBACK (MANTIDA, MAS COM LAYOUT MAIS LIMPO)
+# ABA 2 — FEEDBACK
 # ============================================================
 with aba_feedback:
     st.header("✅ Reforço Preditivo (Q-Learning)")
@@ -319,7 +337,7 @@ with aba_feedback:
     else:
         st.warning("⚠️ Nenhum sinal pendente. Gere um sinal na aba 'Sinal' primeiro.")
 
-    col_f1, col_f2 = st.columns(2)
+    col_f1, col_f2 = st.columns(2, gap="medium")
     with col_f1:
         entrada_feedback = st.text_input("Números reais saídos (separados por vírgula):", placeholder="Ex: 14, 0, 5", key="input_feedback")
     with col_f2:
@@ -357,7 +375,7 @@ with aba_feedback:
                 st.error(f"Erro: {e}")
 
 # ============================================================
-# 5. ABA 3 — AUDITORIA (MANTIDA)
+# ABA 3 — AUDITORIA
 # ============================================================
 with aba_tipo_d:
     st.header("📊 Auditoria Dinâmica e Treinamento")
@@ -371,7 +389,7 @@ with aba_tipo_d:
             f.write(arquivo_upload.getbuffer())
         st.info("Arquivo recebido. Selecione a ação:")
 
-        col_a1, col_a2, col_a3 = st.columns(3)
+        col_a1, col_a2, col_a3 = st.columns(3, gap="medium")
         with col_a1:
             btn_recencia = st.button("⚡ Injetar como Recência", use_container_width=True)
         with col_a2:
@@ -429,10 +447,13 @@ with aba_tipo_d:
                 st.exception(e)
         
         if os.path.exists(caminho_temp):
-            os.remove(caminho_temp)
+            try:
+                os.remove(caminho_temp)
+            except:
+                pass
 
 # ============================================================
-# 6. ABA 4 — PADRÕES (MANTIDA, MAS COM BOTÃO MAIS DESTACADO)
+# ABA 4 — PADRÕES
 # ============================================================
 with aba_padroes:
     st.header("📈 Padrões Aprendidos e Memórias")
@@ -469,7 +490,7 @@ with aba_padroes:
             st.error(f"Erro na extração: {e}")
 
 # ============================================================
-# 7. ABA 5 — CÁLCULOS (MANTIDA)
+# ABA 5 — CÁLCULOS
 # ============================================================
 with aba_matematica:
     st.header("🧮 Engine Estatístico Avançado")
@@ -482,7 +503,7 @@ with aba_matematica:
             janela = st.slider("Janela de análise (Surfe):", 20, 500, 100, 10)
             vies = EngineMatematicoAvancado.calcular_vies_surfe(NOME_BASE_DEFINITIVA, janela=janela)
             
-            col_v1, col_v2 = st.columns(2)
+            col_v1, col_v2 = st.columns(2, gap="medium")
             with col_v1:
                 st.metric("Freq. Vermelho", f"{vies.get('frequencia_v')}%", delta=f"{vies.get('desvio_v')}%")
                 st.metric("Freq. Preto", f"{vies.get('frequencia_p')}%", delta=f"{vies.get('desvio_p')}%")
@@ -497,7 +518,7 @@ with aba_matematica:
     try:
         stake = st.number_input("Stake principal (R$):", 1.0, 5000.0, 10.0, 5.0)
         sim = EngineMatematicoAvancado.simular_split_stake_cobertura(stake)
-        col_s1, col_s2, col_s3 = st.columns(3)
+        col_s1, col_s2, col_s3 = st.columns(3, gap="medium")
         with col_s1:
             st.metric("Aporte na cor", f"R$ {sim.get('stake_cor'):.2f}")
             st.metric("Custo total", f"R$ {sim.get('custo_total_operacao'):.2f}")
