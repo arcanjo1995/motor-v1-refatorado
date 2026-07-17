@@ -100,10 +100,9 @@ class MotorUnificadoV1:
         sucesso = salvar_modelo_longo_prazo(self.ia)
         return {"sucesso": True, "registros_absorvidos": len(dados_novos), "modelo_salvo": sucesso, "mensagem": "Absorvido."}
 
-    def processar_novo_lote(self, novos_dados, auditoria=True):
+    def processar_novo_lote(self, novos_dados):
         """
-        Encadeia o delta sem recarregar o XLS.
-        Se auditoria=False, pula a walk-forward (economiza minutos em grandes volumes).
+        Encadeia o delta sem recarregar o XLS nem reconstruir a IA após a atualização.
         """
         if not novos_dados:
             return {"sucesso": False, "mensagem": "Nenhum dado novo foi fornecido."}
@@ -115,7 +114,7 @@ class MotorUnificadoV1:
                 "mensagem": "Modelo persistido não encontrado. Substitua/treine a base definitiva uma vez antes do encadeamento incremental."
             }
 
-        relatorio = adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False, auditoria=auditoria)
+        relatorio = adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False)
 
         if isinstance(relatorio, dict) and relatorio.get("sucesso"):
             ia_atualizada = relatorio.get("ia_treinada")
@@ -407,7 +406,7 @@ class MotorUnificadoV1:
             dados_novos_para_arquivo.append({"numero": n, "cor": cor})
         recencia_atual = self.ia.dados_recencia.copy() if self.ia else []
         cronologia_ao_vivo_atual = list(getattr(self.ia, "cronologia_ao_vivo", []) or [])
-        rel = adicionar_a_base_longo_prazo(dados_novos_para_arquivo, origem_feedback_ao_vivo=True, auditoria=False)
+        rel = adicionar_a_base_longo_prazo(dados_novos_para_arquivo, origem_feedback_ao_vivo=True)
         self.carregar_tudo(forcar_recencia=False)
         if self.ia:
             self.ia.cronologia_ao_vivo = cronologia_ao_vivo_atual[-5000:]
