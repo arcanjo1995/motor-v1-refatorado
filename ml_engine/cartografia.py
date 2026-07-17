@@ -1,7 +1,7 @@
 import numpy as np
 from collections import defaultdict
 from utils.helpers import hash_chave
-from config.settings import VERSAO_CHAVES_HASH   # <-- ADICIONADO
+from config.settings import VERSAO_CHAVES_HASH
 from rules.analisador import AnalisadorContextoAvancado
 from rules.contagens import MotorContagensProjetivas
 
@@ -55,16 +55,10 @@ class CartografiaMixin:
                     ])
         return list(dict.fromkeys(chaves))
 
-    
     def _obter_regime_hmm_contextual(self, sub_pol):
-        """
-        Retorna somente o estado latente HMM da janela atual. É condicionante de
-        cartografia; não soma bônus V/P e não cria NO CALL isoladamente.
-        """
         if not getattr(self, "ml_hmm", None):
             return "HMM_INDISPONIVEL"
         try:
-            import numpy as np
             c_map = {"P": 0, "V": 1, "B": 2}
             seq = np.asarray(
                 [[c_map.get(str(c).upper(), 2)] for c in sub_pol],
@@ -78,14 +72,6 @@ class CartografiaMixin:
             return "HMM_INDISPONIVEL"
 
     def _chaves_cartografia_contextual_padrao(self, sub_num, sub_pol):
-        """
-        MAIN 98 — descreve o padrão RAIZ e suas condicionantes internas.
-
-        O padrão de cores não recebe direção fixa. Cada raiz é estudada novamente
-        por último número, bigrama, trigrama, regime, regime HMM, Markov, geometria,
-        transição geométrica, regras e contagens ativas. As chaves são independentes para
-        permitir backoff quando um contexto exato ainda possui pouco suporte.
-        """
         if len(sub_num) < 2 or len(sub_pol) < 2:
             return []
 
@@ -170,7 +156,6 @@ class CartografiaMixin:
         return list(dict.fromkeys(chaves))
 
     def _registrar_cartografia_contextual_padrao(self, sub_num, sub_pol, c0, c1):
-        """Registra o desfecho real G0/G1 de cada contexto interno do padrão."""
         rv = self._resultado_ate_g1(c0, c1, "V")
         rp = self._resultado_ate_g1(c0, c1, "P")
         for chave in self._chaves_cartografia_contextual_padrao(sub_num, sub_pol):
@@ -192,13 +177,6 @@ class CartografiaMixin:
                 st["P_falha"] += 1
 
     def obter_voto_padrao_contextual(self, sub_num, sub_pol):
-        """
-        Consulta a cartografia interna do padrão atual.
-
-        Prioriza G0 e usa G0/G1 como confirmação. Contextos específicos recebem
-        mais peso, porém shrinkage por suporte impede uma amostra pequena de
-        transformar um padrão em verdade absoluta.
-        """
         mapa = getattr(self, "cartografia_padroes_contextual", {})
         if not mapa:
             return {
@@ -220,7 +198,6 @@ class CartografiaMixin:
             v_g01 = (float(st.get("V_g0", 0)) + float(st.get("V_g1", 0))) / suporte
             p_g01 = (float(st.get("P_g0", 0)) + float(st.get("P_g1", 0))) / suporte
 
-            # G0 é o objetivo prioritário; G1 confirma que a direção não é frágil.
             score_v = (0.65 * v_g0) + (0.35 * v_g01)
             score_p = (0.65 * p_g0) + (0.35 * p_g01)
 
@@ -306,7 +283,6 @@ class CartografiaMixin:
 
     @staticmethod
     def _resultado_direcional_ate_g2(c0, c1, c2, letra):
-        """Classifica G0/G1/G2/FALHA para uma direção V/P, aceitando Branco."""
         if c0 in (letra, "B"):
             return "G0"
         if c1 in (letra, "B"):
@@ -375,7 +351,6 @@ class CartografiaMixin:
         }
 
     def _chaves_cartografia_contextual_eventos(self, sub_num, sub_pol, eventos):
-        """Gera as mesmas chaves contextuais para uma lista explícita de eventos."""
         if not sub_num or not sub_pol or not eventos:
             return []
 
@@ -407,11 +382,6 @@ class CartografiaMixin:
         return list(dict.fromkeys(chaves))
 
     def _cartografia_recente_regra_atual(self, regra_id):
-        """
-        MAIN 119 — cartografia RECENTE separada da memória macro.
-        Varre somente a recência oficial ativa e conserva o detector oficial:
-        uma regra só é contabilizada quando realmente esteve ativa na janela.
-        """
         dados = list(getattr(self, "dados_recencia", []) or [])[-200:]
         if len(dados) < 15 or not regra_id:
             return {}
@@ -442,11 +412,6 @@ class CartografiaMixin:
         return dict(mapa)
 
     def _chaves_cartografia_contextual_regra(self, sub_num, sub_pol):
-        """
-        Gera níveis de backoff por REGRA/CONTAGEM. A ativação atual continua vindo
-        exclusivamente do detector oficial. A base histórica das regras 4, 10 e
-        5-10 é catalogada diretamente, ocorrência por ocorrência.
-        """
         if len(sub_num) < 12 or len(sub_pol) < 12:
             return []
 
@@ -494,13 +459,6 @@ class CartografiaMixin:
         return registrados
 
     def _mapear_cartografia_contextual_regras_contagens(self, dados):
-        """
-        MAIN 101 — varredura integral do XLS, índice por índice.
-
-        Regra 4, Regra 10 e 5-10 são encontradas diretamente em CADA aparição
-        cronológica, como números, bigramas, trigramas e padrões. A janela de 12
-        permanece intacta para a operação e para as demais regras/contagens.
-        """
         self.cartografia_regras_contextual = defaultdict(
             lambda: {
                 "total": 0, "g0": 0, "g1": 0, "g2": 0, "falha": 0,
@@ -528,23 +486,16 @@ class CartografiaMixin:
             "REGRA_OFICIAL_4", "REGRA_OFICIAL_10", "REGRA_OFICIAL_5_10"
         }
 
-        # i é a posição cronológica atual. i+1/i+2/i+3 são G0/G1/G2 históricos.
         for i in range(0, len(dados) - 3):
             inicio = max(0, i - 11)
             sub_num = numeros[inicio:i + 1]
             sub_pol = cores[inicio:i + 1]
             posicoes_varridas += 1
 
-            # 4, 10 e 5-10: ocorrência direta no índice atual, sem depender da
-            # janela operacional de 12. As condições são cópia lógica exata do
-            # detector oficial e o detector em si permanece intocado.
             eventos_diretos = self._eventos_regras_oficiais_cronologicos_no_indice(
                 numeros, cores, i
             )
 
-            # Demais regras e ciclos de contagem continuam usando a cartografia
-            # já existente. Removemos daqui apenas as três famílias diretas para
-            # impedir dupla contagem da mesma aparição histórica.
             eventos_detector = []
             if len(sub_num) >= 12 and len(sub_pol) >= 12:
                 eventos_detector = [
@@ -584,9 +535,7 @@ class CartografiaMixin:
             "metodo": "VARREDURA_CRONOLOGICA_DIRETA_INDICE_A_INDICE",
             "detector_oficial_alterado": False,
             "janela_12_operacional_alterada": False,
-            "regras_diretas": [
-                "REGRA_4", "REGRA_10", "REGRA_5_10"
-            ],
+            "regras_diretas": ["REGRA_4", "REGRA_10", "REGRA_5_10"],
             "posicoes_varridas": posicoes_varridas,
             "ocorrencias_catalogadas": ocorrencias,
             "ocorrencias_regras_diretas": ocorrencias_regras_diretas,
@@ -600,10 +549,6 @@ class CartografiaMixin:
         }
 
     def obter_voto_regra_contextual(self, sub_num, sub_pol):
-        """
-        Consulta a cartografia das regras/contagens ativas no contexto atual.
-        G0 é prioritário e G1 confirma a direção; G2 fica registrado para auditoria.
-        """
         mapa = getattr(self, "cartografia_regras_contextual", {})
         if not mapa or len(sub_num) < 12 or len(sub_pol) < 12:
             return {
@@ -624,12 +569,8 @@ class CartografiaMixin:
 
             v_g0 = float(st.get("V_g0", 0)) / suporte
             p_g0 = float(st.get("P_g0", 0)) / suporte
-            v_g01 = (
-                float(st.get("V_g0", 0)) + float(st.get("V_g1", 0))
-            ) / suporte
-            p_g01 = (
-                float(st.get("P_g0", 0)) + float(st.get("P_g1", 0))
-            ) / suporte
+            v_g01 = (float(st.get("V_g0", 0)) + float(st.get("V_g1", 0))) / suporte
+            p_g01 = (float(st.get("P_g0", 0)) + float(st.get("P_g1", 0))) / suporte
 
             score_v = (0.70 * v_g0) + (0.30 * v_g01)
             score_p = (0.70 * p_g0) + (0.30 * p_g01)
@@ -707,7 +648,6 @@ class CartografiaMixin:
         return resultado
 
     def _chaves_trajetoria_projecao(self, numero, traj_num, traj_pol):
-        """Destrincha cada contagem vermelha 1..7 por posição, números e fechamento."""
         if not traj_num or not traj_pol:
             return []
         n = int(numero)
@@ -727,8 +667,6 @@ class CartografiaMixin:
             f"PROJ_CORES|N={n}|C={cores_txt}",
             f"PROJ_TRAJ|N={n}|NUM={nums_txt}|C={cores_txt}",
         ]
-        # Posição relativa de CADA número intermediário. Ex.: no 7,
-        # descobrir que o 5 na última casa antes do alvo muda o respeito.
         for pos, valor in enumerate(nums[1:], start=1):
             distancia_alvo = len(nums) - 1 - pos
             chaves.append(
@@ -737,17 +675,6 @@ class CartografiaMixin:
         return list(dict.fromkeys(chaves))
 
     def _mapear_cartografia_completa_xls(self, dados):
-        """
-        MAIN 85 — autópsia cronológica completa do XLS.
-
-        1) Mapeia todo número final e o resultado imediato até G1.
-        2) Mapeia P-P, P-P-P..., V-V, V-V-V... com bigrama, trigrama,
-           último número e sequência numérica exata.
-        3) Mapeia todo xadrez e mede continuação/quebra até G1 nos mesmos contextos.
-        4) Para CADA projeção vermelha 1..7 já existente, destrincha a trajetória
-           completa por posição relativa, números intermediários, fechamento,
-           bigrama, trigrama e cores. Não cria ativador novo.
-        """
         self.cartografia_projecoes_trajetoria = defaultdict(
             lambda: {"total": 0, "respeitada_g0": 0, "respeitada_g1": 0, "nao_respeitada": 0}
         )
@@ -793,8 +720,6 @@ class CartografiaMixin:
                 elif rv == "G1": st["V_g1"] += 1
                 if rp == "G0": st["P_g0"] += 1
                 elif rp == "G1": st["P_g1"] += 1
-            # MAIN 98 — o mesmo evento também alimenta a cartografia interna
-            # do padrão. A cartografia antiga acima permanece sem alteração.
             self._registrar_cartografia_contextual_padrao(
                 sub_num, sub_pol, c0, c1
             )
@@ -919,7 +844,6 @@ class CartografiaMixin:
         }
 
     def _obter_cartografia_projecao_atual(self, numero, sub_num, sub_pol):
-        """Consulta a trajetória ativa da regra 1..7 com backoff hierárquico."""
         n = int(numero)
         gatilho_idx = None
         for i in range(len(sub_num) - 1, -1, -1):
@@ -941,7 +865,6 @@ class CartografiaMixin:
                 continue
             respeitou = int(st.get("respeitada_g0", 0)) + int(st.get("respeitada_g1", 0))
             taxa = respeitou / max(suporte, 1)
-            # Contextos mais específicos entram primeiro e ganham força pelo suporte.
             especificidade = 1.0
             if chave.startswith("PROJ_TRAJ|"): especificidade = 1.00
             elif chave.startswith("PROJ_TRI|"): especificidade = 0.90
@@ -966,7 +889,6 @@ class CartografiaMixin:
         }
 
     def obter_voto_cartografia_xls(self, sub_num, sub_pol):
-        """Voto aditivo da cartografia. Não cria NO CALL e não altera regras."""
         if not getattr(self, "cartografia_xls_metricas", {}).get("ativo"):
             return {"direcao": "NEUTRO", "peso": 0.0, "contextos": 0}
         leituras = []
@@ -1003,3 +925,102 @@ class CartografiaMixin:
             "taxa_v": round(tv * 100, 2),
             "taxa_p": round(tp * 100, 2)
         }
+
+    # ============================================================
+    # MÉTODOS ADICIONAIS QUE ESTAVAM FALTANDO
+    # ============================================================
+    def _eventos_regras_contagens_contextuais(self, sub_num, sub_pol):
+        nums = [int(x) for x in (sub_num or [])]
+        pol = [str(x).upper() for x in (sub_pol or [])]
+        if len(nums) < 12 or len(pol) < 12:
+            return []
+
+        nums = nums[-12:]
+        pol = pol[-12:]
+        geometria = AnalisadorContextoAvancado.mapear_padroes_geometria(pol)
+
+        try:
+            regras = MotorContagensProjetivas.mapear_janela(nums, pol, geometria, None)
+        except Exception:
+            regras = []
+
+        eventos = []
+        for regra in regras:
+            tipo = str(regra.get("tipo_regra", "")).strip()
+            direcao = str(regra.get("direcao", "NEUTRO")).upper()
+            if tipo and direcao in ("VERMELHO", "PRETO"):
+                eventos.append({
+                    "tipo": tipo,
+                    "direcao": direcao,
+                    "familia": str(regra.get("familia", "REGRA_OFICIAL")).upper(),
+                    "origem": "DETECTOR_OFICIAL"
+                })
+
+        try:
+            contagens = MotorContagensProjetivas._mapear_contagens(nums, pol)
+        except Exception:
+            contagens = []
+
+        ultimo_idx = len(nums) - 1
+        for c in contagens:
+            numero = int(c.get("numero", -1))
+            origem_idx = int(c.get("origem_idx", -1))
+            fechamento_idx = int(c.get("fechamento_idx", -1))
+
+            if origem_idx == ultimo_idx:
+                fase = "INICIO"
+            elif fechamento_idx == ultimo_idx:
+                fase = "FECHAMENTO"
+            elif origem_idx < ultimo_idx < fechamento_idx:
+                fase = "EVOLUCAO"
+            else:
+                continue
+
+            eventos.append({
+                "tipo": f"CONTAGEM_{numero}_{fase}",
+                "direcao": "VERMELHO",
+                "familia": "CICLO_CONTAGEM_HISTORICO",
+                "origem": "CARTOGRAFIA_CRONOLOGICA"
+            })
+
+        return eventos
+
+    def _eventos_regras_oficiais_cronologicos_no_indice(self, numeros, cores, indice):
+        nums = [int(x) for x in (numeros or [])]
+        pol = [str(x).upper() for x in (cores or [])]
+        i = int(indice)
+
+        if i < 0 or i >= len(nums) or i >= len(pol):
+            return []
+
+        eventos = []
+
+        def adicionar(tipo, direcao, familia):
+            eventos.append({
+                "tipo": tipo,
+                "direcao": direcao,
+                "familia": familia,
+                "origem": "CARTOGRAFIA_CRONOLOGICA_DIRETA"
+            })
+
+        # REGRA OFICIAL DO NÚMERO 4
+        if i >= 1 and pol[i - 1] == "P" and nums[i] == 4:
+            adicionar("REGRA_4_CENARIO_1_P_4", "PRETO", "REGRA_OFICIAL_4")
+        if i >= 2 and pol[i - 2] == "P" and nums[i - 1] == 4 and pol[i] == "P":
+            adicionar("REGRA_4_CENARIO_2_P_4_P", "PRETO", "REGRA_OFICIAL_4")
+        if i >= 2 and nums[i - 2] == 4 and pol[i - 1:i + 1] == ["P", "P"]:
+            adicionar("REGRA_4_CENARIO_3_4_P_P", "PRETO", "REGRA_OFICIAL_4")
+        if i >= 1 and nums[i - 1] == 4 and pol[i] == "P":
+            adicionar("REGRA_4_CENARIO_4_4_P", "PRETO", "REGRA_OFICIAL_4")
+
+        # REGRA OFICIAL DO NÚMERO 10
+        if nums[i] == 10:
+            adicionar("REGRA_10_ATIVADOR_ESTRUTURAL", "PRETO", "REGRA_OFICIAL_10")
+
+        # REGRA OFICIAL 5-10
+        if i >= 1 and nums[i - 1:i + 1] == [5, 10]:
+            adicionar("REGRA_5_10_CENARIO_1", "PRETO", "REGRA_OFICIAL_5_10")
+        if i >= 2 and nums[i - 2:i] == [5, 10] and pol[i] == "P":
+            adicionar("REGRA_5_10_CENARIO_2_CONTINUACAO_FORTE", "PRETO", "REGRA_OFICIAL_5_10")
+
+        return eventos
