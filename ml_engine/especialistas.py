@@ -1,9 +1,8 @@
-# ml_engine/especialistas.py
-
 from collections import defaultdict
 from utils.helpers import hash_chave
 from rules.analisador import AnalisadorContextoAvancado
 from rules.contagens import MotorContagensProjetivas
+from config.settings import VERSAO_CHAVES_HASH
 
 class EspecialistasMixin:
     """
