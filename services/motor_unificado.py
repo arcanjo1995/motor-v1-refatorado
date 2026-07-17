@@ -18,9 +18,6 @@ from services.treinador import (
 
 
 class MotorUnificadoV1:
-    """
-    Interface unificada para o frontend (Streamlit).
-    """
     def __init__(self):
         self.ia = None
         self.regime_recencia = None
@@ -31,11 +28,8 @@ class MotorUnificadoV1:
     def carregar_tudo(self, forcar_recencia=True):
         print("[MOTOR UNIFICADO] Iniciando carregamento completo...")
         self.ia = carregar_modelo_longo_prazo()
-
-        # A recência ativa representa exclusivamente as últimas 200 rodadas.
         if self.ia and len(self.ia.dados_recencia) > 200:
             self.ia.dados_recencia = self.ia.dados_recencia[-200:]
-
         if self.ia is None:
             if os.path.exists(NOME_BASE_DEFINITIVA):
                 dados_longos = LeitorXLS(NOME_BASE_DEFINITIVA).ler_e_validar()
@@ -49,11 +43,9 @@ class MotorUnificadoV1:
                 gc.collect()
         else:
             self.base_longa_carregada = True
-
         if forcar_recencia:
             if self.ia and not getattr(self.ia, "recencia_foi_injetada_na_sessao", False):
                 self._carregar_e_injetar_recencia()
-
         self.ultima_atualizacao = datetime.now()
         gc.collect()
         print("[MOTOR UNIFICADO] Carregamento concluído.")
@@ -66,19 +58,16 @@ class MotorUnificadoV1:
         dados_rec = LeitorXLS("base_recencia_ativa.xlsx").ler_e_validar()
         if not dados_rec or len(dados_rec) < 20:
             return
-
         dados_rec = dados_rec[-200:]
         print(f"[MOTOR UNIFICADO] Injetando {len(dados_rec)} registros de recência com peso alto...")
         if self.ia is None:
             self.ia = IAPreditivaV1([], [])
-
         self.ia.dados_recencia = list(dados_rec)
         self.ia.injetar_aprendizado_imediato(
             dados_rec,
             multiplicador_peso=6,
             salvar_na_recencia=False
         )
-
         self.ia.treinar_q_learning_contextual(
             dados_rec,
             multiplicador_peso=6,
@@ -111,8 +100,11 @@ class MotorUnificadoV1:
         sucesso = salvar_modelo_longo_prazo(self.ia)
         return {"sucesso": True, "registros_absorvidos": len(dados_novos), "modelo_salvo": sucesso, "mensagem": "Absorvido."}
 
-    def processar_novo_lote(self, novos_dados):
-        """Encadeia o delta sem recarregar o XLS nem reconstruir a IA após a atualização."""
+    def processar_novo_lote(self, novos_dados, auditoria=True):
+        """
+        Encadeia o delta sem recarregar o XLS.
+        Se auditoria=False, pula a walk-forward (economiza minutos em grandes volumes).
+        """
         if not novos_dados:
             return {"sucesso": False, "mensagem": "Nenhum dado novo foi fornecido."}
         if self.ia is None:
@@ -123,7 +115,7 @@ class MotorUnificadoV1:
                 "mensagem": "Modelo persistido não encontrado. Substitua/treine a base definitiva uma vez antes do encadeamento incremental."
             }
 
-        relatorio = adicionar_a_base_longo_prazo(novos_dados)
+        relatorio = adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False, auditoria=auditoria)
 
         if isinstance(relatorio, dict) and relatorio.get("sucesso"):
             ia_atualizada = relatorio.get("ia_treinada")
@@ -140,12 +132,10 @@ class MotorUnificadoV1:
             return {"sucesso": False, "mensagem": "Base de recência muito pequena."}
         if self.ia is None:
             self.carregar_tudo(forcar_recencia=False)
-
         dados_recencia_ativos = [
             {"numero": d["numero"], "cor": d["cor"]}
             for d in dados_recencia[-200:]
         ]
-
         self.ia.dados_recencia = list(dados_recencia_ativos)
         self.ia.injetar_aprendizado_imediato(
             dados_recencia_ativos,
@@ -156,7 +146,6 @@ class MotorUnificadoV1:
         self.regime_recencia = analisar_regime_recencia(self.ia.dados_recencia)
         self.ia.regime_recencia = self.regime_recencia
         self.recencia_injetada = True
-
         self.ia.treinar_q_learning_contextual(
             dados_recencia_ativos,
             multiplicador_peso=6,
@@ -166,9 +155,7 @@ class MotorUnificadoV1:
         self.regime_recencia = analisar_regime_recencia(self.ia.dados_recencia)
         self.ia.regime_recencia = self.regime_recencia
         self.ia.atualizar_matriz_evolutiva()
-
         salvar_modelo_longo_prazo(self.ia)
-
         return {
             "sucesso": True,
             "registros_processados": len(dados_recencia),
@@ -185,9 +172,7 @@ class MotorUnificadoV1:
         if self.ia is None:
             self.carregar_tudo()
         polaridades = ['B' if n == 0 else ('V' if 1 <= n <= 7 else 'P') for n in sequencia_12]
-
         analise = MotorAnalise.analisar_janela(sequencia_12, polaridades, self.ia, eh_sinal_real=True)
-
         if analise["no_call"]["ativo"]:
             return {
                 "sinal": "NO CALL",
@@ -201,7 +186,6 @@ class MotorUnificadoV1:
                 "raciocinio_trace": analise.get("camadas", []),
                 "decisao_final": {"sinal": "NO CALL", "justificativa": analise['no_call']['motivo'], "regra_id": "SISTEMA_TRAVADO"}
             }
-
         geometria = analise["geometria"]
         expectativas = analise["regras_posicionais"]
         direcao_ia = analise["ia"]["direcao"]
@@ -212,7 +196,6 @@ class MotorUnificadoV1:
         xadrez_quebrou = analise["contexto_reversao"]["xadrez_quebrou"]
         contexto_exaustao = analise["contexto_reversao"]["exaustao"]
         modo_mercado = analise["contexto_avancado"].get("modo_mercado", "NEUTRO")
-
         sinal_final, justificativa_final, regra_id_final = JuizHierarquicoModificado.arbitrar_sinal(
             no_call_ativo=False, motivo_nc="", expectations=expectativas, inclinacao_num=None,
             geometria_mercado=geometria,
@@ -223,10 +206,6 @@ class MotorUnificadoV1:
             contexto_exaustao=contexto_exaustao, probabilidade_markov=analise.get("probabilidade_markov"),
             ia_modelo=self.ia, entropia_shannon=analise.get("entropia", 0.0)
         )
-
-        # ============================================================
-        # CONSTRUÇÃO DA CAMADA 7.5 DETALHADA
-        # ============================================================
         validacao_contextual = getattr(self.ia, "_ultima_validacao_autoridade_contextual", {}) or {}
         if validacao_contextual.get("ativo"):
             componentes_ctx = validacao_contextual.get("componentes", {}) or {}
@@ -259,7 +238,6 @@ class MotorUnificadoV1:
                 "impacto": "BLOQUEIO" if validacao_contextual.get("vetar") else "VALIDACAO"
             })
         else:
-            # Adiciona a camada 7.5 mesmo que não haja validação ativa
             analise["camadas"].append({
                 "camada": 7.5,
                 "nome": "Validação Contextual da Autoridade Hierárquica",
@@ -267,16 +245,10 @@ class MotorUnificadoV1:
                 "detalhe": "Nenhuma validação contextual disponível para esta janela.",
                 "impacto": "NEUTRO"
             })
-
-        # Força o NO CALL se streak >= 6 (segurança extra)
         if sinal_final != "NO CALL" and streak >= 6:
             sinal_final = "NO CALL"
             justificativa_final = f"Veto de streak {streak}x (segurança anti-tendência)"
             regra_id_final = "VETO_STREAK"
-
-        # ============================================================
-        # DECISÃO FINAL E DADOS ADICIONAIS
-        # ============================================================
         return {
             "sinal": sinal_final,
             "justificativa": justificativa_final,
@@ -306,15 +278,12 @@ class MotorUnificadoV1:
             self.carregar_tudo()
         polaridades = ['B' if n == 0 else ('V' if 1 <= n <= 7 else 'P') for n in sequencia_12]
         analise = MotorAnalise.analisar_janela(sequencia_12, polaridades, self.ia)
-
         modo_mercado = analise.get("contexto_avancado", {}).get("modo_mercado", "NEUTRO")
         geometria = analise.get("geometria", "ESTÁVEL")
         expectativas = analise.get("regras_posicionais", [])
-
         classificacao_limpa = classificacao.split(" ")[0].upper()
         if "LOSS" in classificacao_limpa or "FALHA" in classificacao_limpa:
             classificacao_limpa = "FALHA"
-
         estado_rl = self.ia.construir_estado_q_contextual(
             sequencia_12,
             polaridades,
@@ -331,9 +300,7 @@ class MotorUnificadoV1:
             recompensa = -2.0
         else:
             recompensa = 0.0
-
         self.ia.atualizar_q_learning(estado_rl, acao_rl, recompensa)
-
         contexto_analise = {
             "geometria": geometria,
             "regras_posicionais": expectativas,
@@ -342,11 +309,8 @@ class MotorUnificadoV1:
             "entropia_shannon": entropia_shannon,
             "monte_carlo_indicou": probabilidade_markov
         }
-
         if classificacao_limpa in ["G0", "G1"]:
             self.ia.registrar_padrao_vencedor(contexto_analise, classificacao_limpa)
-
-        # MAIN 123 — auditoria contrafactual da autorização
         try:
             memoria_cf = getattr(self.ia, "auditoria_contrafactual_autorizacao", None)
             if not isinstance(memoria_cf, dict):
@@ -355,7 +319,6 @@ class MotorUnificadoV1:
                     "no_call_protegeria_g2_falha": 0, "eventos": []
                 }
                 self.ia.auditoria_contrafactual_autorizacao = memoria_cf
-
             direcao_oficial = sinal_indicado if sinal_indicado in ("VERMELHO", "PRETO") else None
             direcao_oposta = (
                 "PRETO" if direcao_oficial == "VERMELHO"
@@ -373,7 +336,6 @@ class MotorUnificadoV1:
                 direcao_oposta and any(c in (direcao_oposta, "BRANCO") for c in cores_reais)
             )
             risco_real = classificacao_limpa in ("G2", "FALHA")
-
             memoria_cf["total"] = int(memoria_cf.get("total", 0)) + 1
             if oficial_g0_g1:
                 memoria_cf["oficial_g0_g1"] = int(memoria_cf.get("oficial_g0_g1", 0)) + 1
@@ -383,7 +345,6 @@ class MotorUnificadoV1:
                 memoria_cf["no_call_protegeria_g2_falha"] = int(
                     memoria_cf.get("no_call_protegeria_g2_falha", 0)
                 ) + 1
-
             eventos_cf = list(memoria_cf.get("eventos", []))
             eventos_cf.append({
                 "regra": regra_id,
@@ -403,35 +364,27 @@ class MotorUnificadoV1:
             memoria_cf["eventos"] = eventos_cf[-500:]
         except Exception as e:
             print(f"[AUDITORIA CONTRAFACTUAL] Registro ignorado por segurança: {e}")
-
         if regra_id and regra_id not in ["NENHUMA", "SISTEMA_TRAVADO"]:
             self.ia.historico_regras[regra_id]["total"] += 1
             if classificacao_limpa in ["G0", "G1"]:
                 self.ia.historico_regras[regra_id]["acertos"] += 1
-
-        # MAIN 132 — reconstrução cronológica ao vivo
         evento_ao_vivo = [int(n) for n in list(sequencia_12) + list(numeros_saidos)]
         cronologia_ao_vivo = list(getattr(self.ia, "cronologia_ao_vivo", []) or [])
-
         maior_sobreposicao = 0
         limite_sobreposicao = min(len(cronologia_ao_vivo), len(evento_ao_vivo))
         for tamanho_sobreposicao in range(limite_sobreposicao, 0, -1):
             if cronologia_ao_vivo[-tamanho_sobreposicao:] == evento_ao_vivo[:tamanho_sobreposicao]:
                 maior_sobreposicao = tamanho_sobreposicao
                 break
-
         if cronologia_ao_vivo and maior_sobreposicao == 0:
             cronologia_ao_vivo = []
-
         numeros_cronologicamente_novos = evento_ao_vivo[maior_sobreposicao:]
         cronologia_ao_vivo.extend(numeros_cronologicamente_novos)
         self.ia.cronologia_ao_vivo = cronologia_ao_vivo[-5000:]
-
         dados_novos_completos = []
         for n in numeros_cronologicamente_novos:
             cor = 'B' if n == 0 else ('V' if 1 <= n <= 7 else 'P')
             dados_novos_completos.append({"numero": n, "cor": cor})
-
         contexto_injecao = {
             "regras_posicionais": expectativas,
             "controlador_retardador": analise.get("controlador_retardador", {}),
@@ -448,17 +401,14 @@ class MotorUnificadoV1:
             for n in numeros_saidos
         ])
         self.ia.dados_recencia = self.ia.dados_recencia[-200:]
-
         dados_novos_para_arquivo = []
         for n in numeros_cronologicamente_novos:
             cor = 'B' if n == 0 else ('V' if 1 <= n <= 7 else 'P')
             dados_novos_para_arquivo.append({"numero": n, "cor": cor})
-
         recencia_atual = self.ia.dados_recencia.copy() if self.ia else []
         cronologia_ao_vivo_atual = list(getattr(self.ia, "cronologia_ao_vivo", []) or [])
-        rel = adicionar_a_base_longo_prazo(dados_novos_para_arquivo, origem_feedback_ao_vivo=True)
+        rel = adicionar_a_base_longo_prazo(dados_novos_para_arquivo, origem_feedback_ao_vivo=True, auditoria=False)
         self.carregar_tudo(forcar_recencia=False)
-
         if self.ia:
             self.ia.cronologia_ao_vivo = cronologia_ao_vivo_atual[-5000:]
             self.ia.dados_recencia = recencia_atual[-200:]
@@ -484,5 +434,4 @@ class MotorUnificadoV1:
         }
 
 
-# Instância global compartilhada esperada pelo app.py
 motor_unificado = MotorUnificadoV1()
