@@ -172,7 +172,7 @@ aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
 ])
 
 # ============================================================
-# ABA 1 — SINAL REAL (TODAS AS FUNCIONALIDADES RESTAURADAS)
+# ABA 1 — SINAL REAL (TODOS OS RELATÓRIOS RESTAURADOS 100%)
 # ============================================================
 with aba_tipo_b:
     st.header("🎯 Sinal Real — Predição Neural")
@@ -222,70 +222,92 @@ with aba_tipo_b:
                     }
 
                     st.markdown("---")
-                    st.markdown("### 🔮 Card de Decisão")
+                    st.markdown("### 🔮 CARD DE DECISÃO OPERACIONAL DA IA")
 
                     with st.container():
-                        col_res1, col_res2 = st.columns([2, 1], gap="medium")
-                        with col_res1:
-                            if resultado.get("no_call"):
-                                st.markdown("<div class='signal-badge signal-no-call'>⚠️ NO CALL</div>", unsafe_allow_html=True)
-                                st.warning(f"**Motivo:** {resultado.get('justificativa')}")
+                        if resultado.get("no_call"):
+                            st.error(f"🚨 **SINAL VETADO PELO AGENTE DE RISCO: NO CALL**")
+                            st.write(f"**Justificativa Analítica:** {resultado.get('justificativa')}")
+                        else:
+                            sinal_final = resultado.get("sinal")
+                            if sinal_final == "VERMELHO":
+                                st.markdown("<h2 style='color: #FF4B4B;'>🔴 SINAL: ENTRAR NO VERMELHO</h2>", unsafe_allow_html=True)
+                            elif sinal_final == "PRETO":
+                                st.markdown("<h2 style='color: #1E1E1E; background-color: #F0F2F6; padding: 10px; border-radius: 5px;'>⚫ SINAL: ENTRAR NO PRETO</h2>", unsafe_allow_html=True)
                             else:
-                                sinal = resultado.get("sinal")
-                                if sinal == "VERMELHO":
-                                    st.markdown("<div class='signal-badge signal-vermelho'>🔴 ENTRAR NO VERMELHO</div>", unsafe_allow_html=True)
-                                elif sinal == "PRETO":
-                                    st.markdown("<div class='signal-badge signal-preto'>⚫ ENTRAR NO PRETO</div>", unsafe_allow_html=True)
+                                st.warning(f"⚪ **SINAL: {sinal_final}**")
+
+                            st.write(f"**Direcionamento Matemático:** {resultado.get('justificativa')}")
+                            st.write(f"**Confiança Estatística da Rede:** {resultado.get('confianca_ia')}%")
+
+                            # ==========================
+                            # RELATÓRIO DO RADAR NUMÉRICO (RESTAURADO)
+                            # ==========================
+                            radar = resultado.get("radar_numerico") or resultado.get("radar") or {}
+                            with st.expander("📡 Relatório do Radar Numérico", expanded=False):
+                                if radar:
+                                    st.write("### Contexto Detectado")
+                                    for chave, valor in radar.items():
+                                        st.write(f"**{str(chave).replace('_',' ').title()}:** {valor}")
                                 else:
-                                    st.markdown(f"<div class='signal-badge signal-neutro'>⚪ {sinal}</div>", unsafe_allow_html=True)
-                                st.write(f"**Direcionamento:** {resultado.get('justificativa')}")
-                                st.write(f"**Confiança da Rede:** {resultado.get('confianca_ia')}%")
-                        with col_res2:
-                            if resultado.get("entropia") is not None:
-                                st.metric("Entropia", f"{resultado.get('entropia', 0):.2f} Bits")
-                            markov = resultado.get("probabilidade_markov", {})
-                            st.caption(f"Markov: V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
-                            if resultado.get("regime_recencia"):
-                                reg = resultado["regime_recencia"]
-                                st.caption(f"Regime: {reg.get('modo_dominante', 'N/D')}")
+                                    st.info("Esta versão do Motor V1 não retornou dados detalhados do Radar Numérico. Quando o módulo enviar essas informações, elas serão exibidas automaticamente aqui sem necessidade de novas alterações no app.")
+
+                            # ==========================
+                            # KELLY (RESTAURADO)
+                            # ==========================
+                            if resultado.get("kelly") is not None:
+                                st.success(f"💰 **Gestão de Risco (Half-Kelly Criterion):** Aporte sugerido de **{resultado.get('kelly')}% da sua banca** para esta entrada.")
+
+                    # Métricas lado a lado
+                    if resultado.get("entropia") is not None:
+                        col_m1, col_m2 = st.columns(2)
+                        with col_m1:
+                            entropia_val = resultado.get('entropia', 0)
+                            st.metric(label="Entropia de Shannon (Nível de Caos)", value=f"{entropia_val} Bits", delta="Alta Imprevisibilidade" if entropia_val > 1.52 else "Mercado Estruturado", delta_color="inverse")
+                        with col_m2:
+                            markov = resultado.get("probabilidade_markov", {"V": 0, "P": 0, "B": 0})
+                            st.metric(label="Probabilidade Pura (Cadeia de Markov)", value=f"V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
 
                     # ============================================================
-                    # EXPANSORES – TODAS AS INFORMAÇÕES RESTAURADAS
+                    # EXPANSORES – TODOS OS RELATÓRIOS DO ORIGINAL
                     # ============================================================
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
                     
                     with col_exp1:
-                        with st.expander("📊 Regime de Recência", expanded=False):
+                        # ===== REGIME DE RECÊNCIA =====
+                        with st.expander("📊 Regime de Recência Proporcional (Filtro Dinâmico)", expanded=False):
                             if resultado.get("regime_recencia"):
                                 st.json(resultado["regime_recencia"])
                             else:
                                 st.info("Nenhum regime disponível.")
-                        
-                        with st.expander("🧮 Análise de Raridade", expanded=False):
+
+                        # ===== ANÁLISE DE RARIDADE =====
+                        with st.expander("🧮 Análise de Raridade da Janela Atual", expanded=False):
                             raridade = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
-                            st.write(f"**Streak:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
-                            st.write(f"**Prob. continuação:** {raridade.get('probabilidade')}%")
-                            st.info(f"**Status:** {raridade.get('status')}")
-                        
-                        with st.expander("🔍 Auditoria de Raciocínio (Todas as Camadas)", expanded=False):
+                            st.write(f"**Streak Atual Detectado:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
+                            st.write(f"**Probabilidade Teórica de Continuação:** {raridade.get('probabilidade')}%")
+                            st.info(f"**Status Estrutural:** {raridade.get('status')}")
+
+                        # ===== AUDITORIA DE RACIOCÍNIO =====
+                        with st.expander("🔍 Auditoria de Raciocínio por Camadas Neurais", expanded=False):
                             if resultado.get("raciocinio_trace"):
                                 for camada in resultado["raciocinio_trace"]:
                                     st.markdown(f"**Camada {camada.get('camada')} — {camada.get('nome')}**")
-                                    st.write(f"*Resultado:* `{camada.get('resultado')}`")
-                                    st.write(f"*Detalhe:* {camada.get('detalhe')}")
+                                    st.write(f"• *Saída do Módulo:* `{camada.get('resultado')}`")
+                                    st.write(f"• *Interpretação:* {camada.get('detalhe')}")
                                     st.markdown("---")
                             else:
                                 st.info("Nenhum trace disponível.")
-                        
-                        # ===== RESTAURADO: VALIDAÇÃO CONTEXTUAL DA AUTORIDADE =====
+
+                        # ===== VALIDAÇÃO CONTEXTUAL DA AUTORIDADE =====
                         with st.expander("📌 Validação Contextual da Autoridade", expanded=False):
                             validacao = resultado.get("validacao_contextual_autoridade", {})
                             if validacao:
                                 st.json(validacao)
                             else:
                                 st.info("Nenhuma validação contextual disponível.")
-                        
-                        # ===== RESTAURADO: AUDITORIA CONTRAFACTUAL =====
+
+                        # ===== AUDITORIA CONTRAFACTUAL =====
                         with st.expander("📋 Auditoria Contrafactual da Autorização", expanded=False):
                             auditoria = resultado.get("auditoria_contrafactual_autorizacao", {})
                             if auditoria:
@@ -294,44 +316,78 @@ with aba_tipo_b:
                                 st.info("Nenhuma auditoria contrafactual registrada.")
                     
                     with col_exp2:
-                        with st.expander("🧠 Regras e Contagens Ativas (Completas)", expanded=False):
+                        # ===== REGRAS OFICIAIS E CONTAGENS ATIVAS (COMPLETO) =====
+                        with st.expander("🧠 Regras Oficiais e Contagens Ativas", expanded=True):
                             try:
                                 regras = MotorContagensProjetivas.mapear_janela(
                                     lista_numeros, polaridades, None, getattr(motor, "ia", None)
                                 )
+                                contagens = MotorContagensProjetivas._mapear_contagens(lista_numeros, polaridades)
+
+                                st.caption("Auditoria visual das evidências estruturais já analisadas pelo motor e encaminhadas à arbitragem do sinal.")
+
+                                st.markdown("### 📌 Evidências estruturais detectadas")
                                 if regras:
-                                    for r in regras:
+                                    for idx, r in enumerate(regras, 1):
                                         direcao = r.get("direcao", "NEUTRO")
-                                        emoji = "🔴" if direcao == "VERMELHO" else ("⚫" if direcao == "PRETO" else "⚪")
-                                        st.markdown(f"{emoji} **{r.get('tipo_regra')}**")
-                                        st.write(f"• Família: `{r.get('familia')}` | Origem: `{r.get('origem')}`")
-                                        st.write(f"• Direção: **{direcao}** | Peso: **{r.get('peso')}**")
-                                        detalhes = {k: v for k, v in r.items() if k not in ("direcao", "tipo_regra", "origem", "peso", "familia")}
+                                        simbolo = "🔴" if direcao == "VERMELHO" else ("⚫" if direcao == "PRETO" else "⚪")
+                                        st.markdown(f"**{idx}. {simbolo} {r.get('tipo_regra', 'REGRA_NAO_IDENTIFICADA')}**")
+                                        st.write(f"• Família: `{r.get('familia', 'N/D')}` | Origem: `{r.get('origem', 'N/D')}`")
+                                        st.write(f"• Direção: **{direcao}** | Peso: **{r.get('peso', 'N/D')}** | Validade: **{r.get('validade', 'N/D')}**")
+                                        detalhes = {k: v for k, v in r.items() if k not in ("direcao", "tipo_regra", "origem", "peso", "familia", "validade")}
                                         if detalhes:
                                             st.json(detalhes)
                                         st.markdown("---")
                                 else:
-                                    st.info("Nenhuma regra ativa.")
+                                    st.info("Nenhuma regra oficial com consequência ativa no fechamento desta janela.")
+
+                                st.markdown("### 🔢 Mapa completo das contagens projetivas")
+                                if contagens:
+                                    resumo_status = {}
+                                    for c in contagens:
+                                        status_cont = c.get("status", "DESCONHECIDO")
+                                        resumo_status[status_cont] = resumo_status.get(status_cont, 0) + 1
+
+                                    col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+                                    with col_c1: st.metric("Abertas", resumo_status.get("ABERTA", 0))
+                                    with col_c2: st.metric("Fechadas/Vivas", resumo_status.get("FECHADA", 0) + resumo_status.get("VIVA", 0))
+                                    with col_c3: st.metric("Pagas", resumo_status.get("PAGA", 0))
+                                    with col_c4: st.metric("Mortas", resumo_status.get("MORTA", 0))
+
+                                    for idx, c in enumerate(contagens, 1):
+                                        st.markdown(f"**Contagem {idx} — Número {c.get('numero')} — Status: `{c.get('status')}`**")
+                                        st.write(f"• Origem: R{c.get('origem_posicao')} | Fechamento: R{c.get('fechamento_posicao')} | Casas: {c.get('casas_exigidas')}")
+                                        st.write(f"• Coexistente: {'SIM' if c.get('coexistente') else 'NÃO'} | Transicional: {'SIM' if c.get('transicional') else 'NÃO'} | Assumida por: {c.get('assumida_por') or 'NÃO'}")
+                                        st.markdown("---")
+                                else:
+                                    st.info("Nenhuma contagem projetiva de 1 a 7 foi aberta nesta janela.")
+
+                                # ===== LEITURA DE ARBITRAGEM (RESTAURADA) =====
+                                familias = sorted({r.get("familia", "N/D") for r in regras})
+                                st.markdown("### ⚖️ Leitura de arbitragem")
+                                st.write(f"**Famílias estruturais ativas:** {', '.join(familias) if familias else 'NENHUMA'}")
+                                st.write(f"**Regra vencedora registrada pelo sinal:** `{resultado.get('regra_id', 'DESCONHECIDO')}`")
+                                st.info("As evidências podem coexistir e apontar direções diferentes. O painel não elimina regras concorrentes: mostra o mapa estrutural analisado pelo motor.")
                             except Exception as e:
-                                st.warning(f"Erro: {e}")
-                        
-                        # ===== RESTAURADO: SIMULAÇÃO DE ROTAS (COMPLETA) =====
+                                st.warning(f"Erro ao carregar regras: {e}")
+
+                        # ===== SIMULAÇÃO DE ROTAS =====
                         with st.expander("📈 Simulação de Rotas (Próximos Resultados)", expanded=False):
                             sim = resultado.get("simulacao_rotas_proximos_resultados", {})
                             if sim.get("ativo"):
                                 st.json(sim)
                             else:
                                 st.info("Simulação não disponível para esta janela.")
-                        
-                        # ===== RESTAURADO: CONFLUÊNCIA DE CAMADAS AMPLIADAS =====
+
+                        # ===== CONFLUÊNCIA DE CAMADAS AMPLIADAS =====
                         with st.expander("🧩 Confluência de Camadas Ampliadas", expanded=False):
                             confluencia = resultado.get("confluencia_camadas_ampliadas", {})
                             if confluencia:
                                 st.json(confluencia)
                             else:
                                 st.info("Nenhuma confluência de camadas ampliadas disponível.")
-                        
-                        # ===== RESTAURADO: OPOSIÇÃO CAUSAL CONSOLIDADA =====
+
+                        # ===== OPOSIÇÃO CAUSAL CONSOLIDADA =====
                         with st.expander("⚖️ Oposição Causal Consolidada (Streak)", expanded=False):
                             oposicao = resultado.get("oposicao_causal_consolidada", {})
                             if oposicao:
@@ -503,10 +559,14 @@ with aba_padroes:
                         rel = ia.analisar_comportamento_pos_numero()
                         for num, dados in rel.items():
                             st.markdown(f"**Número {num}**")
-                            st.write(f"• Total: {dados.get('total_aparicoes')}")
-                            st.write(f"• Cor predominante: {dados.get('cor_mais_frequente_apos')} ({dados.get('frequencia_cor_dominante_%')}%)")
-                            st.write(f"• Estabilidade: {dados.get('estabilidade')} | Saturação: {dados.get('saturacao')}")
-                            st.write(f"• Tendência recente: {dados.get('tendencia_recente')}")
+                            st.write(f"• Aparições Totais: {dados.get('total_aparicoes')}")
+                            st.write(f"• Cor Predominante Posterior: `{dados.get('cor_mais_frequente_apos')}`")
+                            st.write(f"• Frequência da Dominante: {dados.get('frequencia_cor_dominante_%')}%")
+                            st.write(f"• Estabilidade Histórica: `{dados.get('estabilidade')}`")
+                            st.write(f"• Saturação de Volumetria: `{dados.get('saturacao')}`")
+                            st.write(f"• Tendência de Fluxo: `{dados.get('tendencia_recente')}`")
+                            st.write("**Distribuição Real de Frequências (V/P/B):**")
+                            st.json(dados.get("distribuicao_pos"))
                             st.markdown("---")
         except Exception as e:
             st.error(f"Erro na extração: {e}")
@@ -531,25 +591,28 @@ with aba_matematica:
                 st.metric("Freq. Preto", f"{vies.get('frequencia_p')}%", delta=f"{vies.get('desvio_p')}%")
             with col_v2:
                 st.metric("Freq. Branco", f"{vies.get('frequencia_b')}%")
-                st.info(f"**Parecer:** {vies.get('vies')}")
+                st.info(f"**Parecer do Motor:**\n\n{vies.get('vies')}")
         except Exception as e:
             st.error(f"Erro: {e}")
 
     st.markdown("---")
-    st.subheader("💰 Split Stake (Cobertura)")
+    st.subheader("💰 Simulador de Cobertura e Divisão de Aportes (Split Stake)")
+    st.caption("Cálculo exato das frações de capital de cobertura com base na margem matemática estática.")
+    
     try:
-        stake = st.number_input("Stake principal (R$):", 1.0, 5000.0, 10.0, 5.0)
+        stake = st.number_input("Insira o valor da sua Stake Principal na cor escolhida (R$):", min_value=1.0, max_value=5000.0, value=10.0, step=5.0)
         sim = EngineMatematicoAvancado.simular_split_stake_cobertura(stake)
-        col_s1, col_s2, col_s3 = st.columns(3, gap="medium")
+
+        col_s1, col_s2, col_s3 = st.columns(3)
         with col_s1:
-            st.metric("Aporte na cor", f"R$ {sim.get('stake_cor'):.2f}")
-            st.metric("Custo total", f"R$ {sim.get('custo_total_operacao'):.2f}")
+            st.metric(label="Aporte na Cor Principal", value=f"R$ {sim.get('stake_cor'):.2f}")
+            st.metric(label="Custo Total da Operação", value=f"R$ {sim.get('custo_total_operacao'):.2f}")
         with col_s2:
-            st.metric("Cobertura Branco (1/7)", f"R$ {sim.get('cobertura_b_ideal_1_7'):.2f}")
-            st.metric("Cobertura Branco (1/10)", f"R$ {sim.get('cobertura_b_matematica_1_10'):.2f}")
+            st.metric(label="Cobertura de Branco Ideal (Proporção 1/7)", value=f"R$ {sim.get('cobertura_b_ideal_1_7'):.2f}")
+            st.metric(label="Cobertura Conservadora (Proporção 1/10)", value=f"R$ {sim.get('cobertura_b_matematica_1_10'):.2f}")
         with col_s3:
-            st.metric("Lucro se Branco", f"R$ {sim.get('lucro_liquido_se_der_branco'):.2f}")
-            st.metric("House Edge", sim.get("house_edge_estatico"))
+            st.metric(label="Lucro Líquido Real (Se bater o Branco)", value=f"R$ {sim.get('lucro_liquido_se_der_branco'):.2f}")
+            st.metric(label="House Edge Mapeado", value=sim.get("house_edge_estatico"))
     except Exception as e:
         st.error(f"Erro: {e}")
 
