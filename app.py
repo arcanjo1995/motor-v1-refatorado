@@ -172,7 +172,7 @@ aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
 ])
 
 # ============================================================
-# ABA 1 — SINAL REAL (TODOS OS RELATÓRIOS RESTAURADOS)
+# ABA 1 — SINAL REAL
 # ============================================================
 with aba_tipo_b:
     st.header("🎯 Sinal Real — Predição Neural")
@@ -241,7 +241,7 @@ with aba_tipo_b:
                             st.write(f"**Confiança Estatística da Rede:** {resultado.get('confianca_ia')}%")
 
                             # ==========================
-                            # RELATÓRIO DO RADAR NUMÉRICO (RESTAURADO)
+                            # RELATÓRIO DO RADAR NUMÉRICO
                             # ==========================
                             radar = resultado.get("radar_numerico") or resultado.get("radar") or {}
                             with st.expander("📡 Relatório do Radar Numérico", expanded=False):
@@ -253,7 +253,7 @@ with aba_tipo_b:
                                     st.info("Esta versão do Motor V1 não retornou dados detalhados do Radar Numérico. Quando o módulo enviar essas informações, elas serão exibidas automaticamente aqui sem necessidade de novas alterações no app.")
 
                             # ==========================
-                            # KELLY (RESTAURADO)
+                            # KELLY
                             # ==========================
                             if resultado.get("kelly") is not None:
                                 st.success(f"💰 **Gestão de Risco (Half-Kelly Criterion):** Aporte sugerido de **{resultado.get('kelly')}% da sua banca** para esta entrada.")
@@ -269,26 +269,23 @@ with aba_tipo_b:
                             st.metric(label="Probabilidade Pura (Cadeia de Markov)", value=f"V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
 
                     # ============================================================
-                    # EXPANSORES – TODOS OS RELATÓRIOS DO ORIGINAL
+                    # EXPANSORES – TODOS OS RELATÓRIOS
                     # ============================================================
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
                     
                     with col_exp1:
-                        # ===== REGIME DE RECÊNCIA =====
                         with st.expander("📊 Regime de Recência Proporcional (Filtro Dinâmico)", expanded=False):
                             if resultado.get("regime_recencia"):
                                 st.json(resultado["regime_recencia"])
                             else:
                                 st.info("Nenhum regime disponível.")
 
-                        # ===== ANÁLISE DE RARIDADE =====
                         with st.expander("🧮 Análise de Raridade da Janela Atual", expanded=False):
                             raridade = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
                             st.write(f"**Streak Atual Detectado:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
                             st.write(f"**Probabilidade Teórica de Continuação:** {raridade.get('probabilidade')}%")
                             st.info(f"**Status Estrutural:** {raridade.get('status')}")
 
-                        # ===== AUDITORIA DE RACIOCÍNIO =====
                         with st.expander("🔍 Auditoria de Raciocínio por Camadas Neurais", expanded=False):
                             if resultado.get("raciocinio_trace"):
                                 for camada in resultado["raciocinio_trace"]:
@@ -299,7 +296,6 @@ with aba_tipo_b:
                             else:
                                 st.info("Nenhum trace disponível.")
 
-                        # ===== VALIDAÇÃO CONTEXTUAL DA AUTORIDADE =====
                         with st.expander("📌 Validação Contextual da Autoridade", expanded=False):
                             validacao = resultado.get("validacao_contextual_autoridade", {})
                             if validacao:
@@ -307,7 +303,6 @@ with aba_tipo_b:
                             else:
                                 st.info("Nenhuma validação contextual disponível.")
 
-                        # ===== AUDITORIA CONTRAFACTUAL =====
                         with st.expander("📋 Auditoria Contrafactual da Autorização", expanded=False):
                             auditoria = resultado.get("auditoria_contrafactual_autorizacao", {})
                             if auditoria:
@@ -316,7 +311,6 @@ with aba_tipo_b:
                                 st.info("Nenhuma auditoria contrafactual registrada.")
                     
                     with col_exp2:
-                        # ===== REGRAS OFICIAIS E CONTAGENS ATIVAS (COMPLETO) =====
                         with st.expander("🧠 Regras Oficiais e Contagens Ativas", expanded=True):
                             try:
                                 regras = MotorContagensProjetivas.mapear_janela(
@@ -362,7 +356,7 @@ with aba_tipo_b:
                                 else:
                                     st.info("Nenhuma contagem projetiva de 1 a 7 foi aberta nesta janela.")
 
-                                # ===== LEITURA DE ARBITRAGEM (RESTAURADA) =====
+                                # ===== LEITURA DE ARBITRAGEM =====
                                 familias = sorted({r.get("familia", "N/D") for r in regras})
                                 st.markdown("### ⚖️ Leitura de arbitragem")
                                 st.write(f"**Famílias estruturais ativas:** {', '.join(familias) if familias else 'NENHUMA'}")
@@ -371,7 +365,6 @@ with aba_tipo_b:
                             except Exception as e:
                                 st.warning(f"Erro ao carregar regras: {e}")
 
-                        # ===== SIMULAÇÃO DE ROTAS =====
                         with st.expander("📈 Simulação de Rotas (Próximos Resultados)", expanded=False):
                             sim = resultado.get("simulacao_rotas_proximos_resultados", {})
                             if sim.get("ativo"):
@@ -379,7 +372,6 @@ with aba_tipo_b:
                             else:
                                 st.info("Simulação não disponível para esta janela.")
 
-                        # ===== CONFLUÊNCIA DE CAMADAS AMPLIADAS =====
                         with st.expander("🧩 Confluência de Camadas Ampliadas", expanded=False):
                             confluencia = resultado.get("confluencia_camadas_ampliadas", {})
                             if confluencia:
@@ -387,7 +379,6 @@ with aba_tipo_b:
                             else:
                                 st.info("Nenhuma confluência de camadas ampliadas disponível.")
 
-                        # ===== OPOSIÇÃO CAUSAL CONSOLIDADA =====
                         with st.expander("⚖️ Oposição Causal Consolidada (Streak)", expanded=False):
                             oposicao = resultado.get("oposicao_causal_consolidada", {})
                             if oposicao:
@@ -519,12 +510,16 @@ with aba_tipo_d:
             except Exception as e:
                 st.error(f"🚨 Proteção de Crash Ativada na Substituição: {e}")
 
+        # ============================================================
+        # BOTÃO "ENCADEAR" – COM auditoria=False (OTIMIZAÇÃO)
+        # ============================================================
         if btn_adicionar:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
                 if dados:
                     with st.spinner("Processando lote incremental sem recarregar a base XLS no motor..."):
-                        rel = motor.processar_novo_lote(dados)
+                        # ===== MODIFICAÇÃO: passamos auditoria=False para pular a auditoria pesada =====
+                        rel = motor.processar_novo_lote(dados, auditoria=False)
 
                     del dados
                     gc.collect()
