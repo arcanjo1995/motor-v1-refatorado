@@ -817,9 +817,6 @@ class IAPreditivaV1(
                 self.filtro_discriminativo_config[chave_config] = filtro_config_salvo[chave_config]
 
         # MAIN 96 — veto por instabilidade da decisão final.
-        # Especialistas continuam sendo fontes de direção/competência. O veto
-        # exige entropia decisória alta, conflito entre famílias independentes
-        # e risco histórico G2/FALHA comprovado. A cartografia é agravante.
         self.filtro_discriminativo_config["versao"] = 5
         self.filtro_discriminativo_config["risco_veto"] = 0.24
         self.filtro_discriminativo_config["risco_contexto_alto"] = 0.22
@@ -842,8 +839,6 @@ class IAPreditivaV1(
                 "peso_risco": float(stats.get("peso_risco", 0.0))
             }
         self.risco_g2_mais_metricas = state.get('risco_g2_mais_metricas', {})
-        # Retorno integral ao especialista hierárquico V2: o veto relativo V3
-        # não é carregado nem reativado por modelos antigos.
         risco_config_padrao = {
             "versao": 2,
             "risco_veto": 0.34,
@@ -869,35 +864,6 @@ class IAPreditivaV1(
             if chave_config in risco_config_salvo and chave_config != "versao":
                 self.risco_g2_mais_config[chave_config] = risco_config_salvo[chave_config]
         self.risco_g2_mais_config["versao"] = 2
-        self.markov_temporal = {ordem: defaultdict(lambda: {"V": 0.0, "P": 0.0, "B": 0.0, "total": 0.0}) for ordem in range(1, 7)}
-        self.markov_temporal_regime = {ordem: defaultdict(lambda: {"V": 0.0, "P": 0.0, "B": 0.0, "total": 0.0}) for ordem in range(1, 7)}
-        for nome_temporal in ['markov_temporal', 'markov_temporal_regime']:
-            destino = getattr(self, nome_temporal)
-            for ordem, tabela in state.get(nome_temporal, {}).items():
-                ordem_int = int(ordem)
-                for chave, stats in tabela.items():
-                    chave_final = tuple(chave) if isinstance(chave, list) else chave
-                    destino[ordem_int][chave_final] = {
-                        "V": float(stats.get("V", 0.0)), "P": float(stats.get("P", 0.0)),
-                        "B": float(stats.get("B", 0.0)), "total": float(stats.get("total", 0.0))
-                    }
-
-        # Restaura o contrato mutável das memórias detalhadas após o pickle.
-        # __getstate__ converte defaultdicts em dict para serialização; no carregamento
-        # cada mapa e o campo interno "quebradores" precisam voltar a defaultdict.
-        for d_name in ['padroes_xadrez_detalhado', 'padroes_streak_detalhado', 'padroes_gerais_detalhado']:
-            _mapa_carregado = getattr(self, d_name, {})
-            _mapa_restaurado = defaultdict(fabrica_padrao_detalhado)
-            for _chave_padrao, _detalhe_padrao in dict(_mapa_carregado or {}).items():
-                _detalhe_restaurado = fabrica_padrao_detalhado()
-                if isinstance(_detalhe_padrao, dict):
-                    _detalhe_restaurado.update(_detalhe_padrao)
-                    _detalhe_restaurado["quebradores"] = defaultdict(
-                        int,
-                        dict(_detalhe_padrao.get("quebradores", {}) or {})
-                    )
-                _mapa_restaurado[_chave_padrao] = _detalhe_restaurado
-            setattr(self, d_name, _mapa_restaurado)
         return state
 
     def _treinar_modelo_profundo(self):
@@ -919,7 +885,7 @@ class IAPreditivaV1(
             self._validar_regras_posicionais_cronologica(todos_dados)
             self._validar_competencia_camadas_ampliadas_cronologica(todos_dados)
             self._treinar_risco_g2_mais_base_longa()
-            self._treinar_ml_avancado(todos_dados) # ADICIONE "todos_dados)" PARA FECHAR A FUNÇÃO AQUI
+            self._treinar_ml_avancado(todos_dados)
 
     def construir_cadeia_causal_consequencia(self, sub_num, sub_pol, expectativas=None):
         """
@@ -984,6 +950,7 @@ class IAPreditivaV1(
         }
         self.ultima_consequencia_futura = consequencia
         return consequencia
+
     def predizer_proxima_casa(self, sub_num, sub_pol, analise_contexto=None):
         if len(sub_num) < 12:
             return "NEUTRO", 0.0, "Janela insuficiente"
