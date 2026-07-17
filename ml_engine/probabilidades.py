@@ -1,5 +1,7 @@
 from collections import defaultdict
 from rules.analisador import AnalisadorContextoAvancado
+from rules.contagens import MotorContagensProjetivas   # <-- IMPORT ADICIONADA
+
 
 class ProbabilidadesMixin:
     def obter_voto_temporal(self, ultimas_cores):
