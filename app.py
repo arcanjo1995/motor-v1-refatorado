@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import time
 from datetime import datetime
 import json
 import gc
@@ -519,22 +520,31 @@ with aba_tipo_d:
             except Exception as e:
                 st.error(f"🚨 Proteção de Crash Ativada na Substituição: {e}")
 
+        # ============================================================
+        # BOTÃO "ENCADEAR" – COM st.status PARA MONITORAMENTO
+        # ============================================================
         if btn_adicionar:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
                 if dados:
-                    with st.spinner("Processando lote incremental sem recarregar a base XLS no motor..."):
+                    with st.status("⏳ Processando lote incremental...", expanded=True) as status:
+                        st.write("📂 Lendo dados do arquivo...")
+                        time.sleep(0.1)  # pequena pausa para a mensagem aparecer
+                        
+                        st.write("🧠 Executando encadeamento dinâmico (auditoria ativa)...")
                         rel = motor.processar_novo_lote(dados)
-
+                        
+                        if rel and isinstance(rel, dict) and rel.get("sucesso"):
+                            status.update(label="✅ Encadeamento concluído!", state="complete")
+                            st.success("✅ Registros acoplados à base definitiva e persistidos no modelo pkl com sucesso!")
+                            st.json(rel)
+                        else:
+                            status.update(label="❌ Falha no encadeamento", state="error")
+                            erro_ms = rel.get("mensagem") if isinstance(rel, dict) else "Retorno nulo da camada de salvamento."
+                            st.error(f"Falha no Encadeamento: {erro_ms}")
+                    
                     del dados
                     gc.collect()
-
-                    if rel and isinstance(rel, dict) and rel.get("sucesso"):
-                        st.success("✅ Registros acoplados à base definitiva e persistidos no modelo pkl com sucesso!")
-                        st.json(rel)
-                    else:
-                        erro_ms = rel.get("mensagem") if isinstance(rel, dict) else "Retorno nulo da camada de salvamento."
-                        st.error(f"Falha no Encadeamento: {erro_ms}")
                 else:
                     st.error("Erro: Nenhum dado numérico válido encontrado no arquivo enviado para encadeamento.")
             except Exception as e:
