@@ -19,9 +19,115 @@ from services.auditoria import MotorV1Completo
 from services.treinador import adicionar_a_base_longo_prazo
 
 # ============================================================
-# CONFIGURAÇÃO DA PÁGINA
+# CONFIGURAÇÃO DA PÁGINA (com tema claro/escuro personalizado)
 # ============================================================
-st.set_page_config(page_title="MOTOR V1 - DEEP LEARNING", page_icon="🧠", layout="wide")
+st.set_page_config(
+    page_title="MOTOR V1 - Deep Learning",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ============================================================
+# CSS PERSONALIZADO PARA UM LAYOUT MAIS MODERNO
+# ============================================================
+st.markdown("""
+<style>
+    /* Cabeçalho principal */
+    .main-header {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        padding: 1.5rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .main-header h1 {
+        margin: 0;
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+    }
+    .main-header p {
+        margin: 0.2rem 0 0 0;
+        opacity: 0.85;
+        font-size: 1rem;
+    }
+    /* Cards de métricas */
+    .metric-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem 1.2rem;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        border-left: 4px solid #4CAF50;
+        margin-bottom: 0.5rem;
+    }
+    .metric-card .label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+    }
+    .metric-card .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1a1a2e;
+    }
+    /* Botões estilizados */
+    .stButton button {
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    /* Expanders com borda suave */
+    .streamlit-expanderHeader {
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+    /* Badge de sinal */
+    .signal-badge {
+        display: inline-block;
+        padding: 0.3rem 1rem;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    .signal-vermelho {
+        background: #ff4b4b;
+        color: white;
+    }
+    .signal-preto {
+        background: #1e1e1e;
+        color: white;
+    }
+    .signal-no-call {
+        background: #ffa500;
+        color: white;
+    }
+    /* Rodapé */
+    .footer {
+        margin-top: 3rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+        text-align: center;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    /* Sidebar com fundo diferenciado */
+    .css-1d391kg {
+        background-color: #f8f9fa;
+    }
+    /* Ajuste para telas menores */
+    @media (max-width: 768px) {
+        .main-header h1 { font-size: 1.5rem; }
+        .metric-card .value { font-size: 1.2rem; }
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================================
 # INICIALIZAÇÃO DO MOTOR NO SESSION STATE
@@ -38,80 +144,104 @@ if "motor_v1" not in st.session_state:
 motor = st.session_state.motor_v1
 
 # ============================================================
-# PAINEL LATERAL - STATUS DO SISTEMA E TAMANHO DO CÉREBRO
+# CABEÇALHO PRINCIPAL
 # ============================================================
-st.sidebar.header("⚙️ Status de Operação")
-try:
-    status_motor = motor.status()
-except Exception as e:
-    status_motor = {}
-    st.sidebar.error("Erro ao ler status do motor.")
+st.markdown("""
+<div class="main-header">
+    <h1>🧠 MOTOR V1 — Deep Learning &amp; Q-Learning</h1>
+    <p>Arquitetura ativa: MLP · Gradient Boosting · Markov multiescala · Memórias contextuais · Meta-confluência adaptativa</p>
+</div>
+""", unsafe_allow_html=True)
 
-if status_motor.get("ia_carregada"):
-    st.sidebar.success("🤖 IA Preditiva: ATIVA")
-else:
-    st.sidebar.error("🤖 IA Preditiva: INATIVA")
-
-if status_motor.get("base_longa_carregada"):
-    st.sidebar.success("📊 Base Longa: CARREGADA")
-else:
-    st.sidebar.warning("📊 Base Longa: NÃO DETECTADA")
-
-if status_motor.get("recencia_injetada"):
-    st.sidebar.success("⚡ Recência: INJETADA (PESO OFICIAL 6)")
-else:
-    st.sidebar.info("⚡ Recência: AGUARDANDO ATUALIZAÇÃO")
-
-# ---- MEDIDOR DE VOLUME DA MEMÓRIA RAM ----
-st.sidebar.markdown("---")
-st.sidebar.subheader("🧠 Tamanho do Cérebro Ativo")
-if status_motor.get("volume_longo_prazo") is not None:
-    st.sidebar.metric(label="Base Mestra (Longo Prazo)", value=f"{status_motor.get('volume_longo_prazo')} Giros")
-else:
-    st.sidebar.metric(label="Base Mestra (Longo Prazo)", value="0 Giros")
+# ============================================================
+# PAINEL LATERAL — STATUS DO SISTEMA (REFORMULADO)
+# ============================================================
+with st.sidebar:
+    st.markdown("## ⚙️ Status de Operação")
     
-if status_motor.get("volume_recencia") is not None:
-    st.sidebar.metric(label="Memória Imediata (Recência)", value=f"{status_motor.get('volume_recencia')} Giros")
-else:
-    st.sidebar.metric(label="Memória Imediata (Recência)", value="0 Giros")
-st.sidebar.markdown("---")
+    try:
+        status_motor = motor.status()
+    except Exception as e:
+        status_motor = {}
+        st.error("Erro ao ler status do motor.")
 
-if status_motor.get("ultima_atualizacao"):
-    st.sidebar.caption(f"Último sincronismo: {status_motor.get('ultima_atualizacao')}")
+    col1, col2 = st.columns(2)
+    with col1:
+        if status_motor.get("ia_carregada"):
+            st.success("🤖 IA Preditiva: **ATIVA**")
+        else:
+            st.error("🤖 IA Preditiva: **INATIVA**")
+    with col2:
+        if status_motor.get("base_longa_carregada"):
+            st.success("📊 Base Longa: **CARREGADA**")
+        else:
+            st.warning("📊 Base Longa: **NÃO DETECTADA**")
+
+    if status_motor.get("recencia_injetada"):
+        st.success("⚡ Recência: **INJETADA** (Peso 6)")
+    else:
+        st.info("⚡ Recência: **AGUARDANDO**")
+
+    st.markdown("---")
+    st.markdown("### 🧠 Tamanho do Cérebro Ativo")
+    col3, col4 = st.columns(2)
+    with col3:
+        st.metric(
+            label="Base Mestra",
+            value=f"{status_motor.get('volume_longo_prazo', 0)} Giros"
+        )
+    with col4:
+        st.metric(
+            label="Memória Imediata",
+            value=f"{status_motor.get('volume_recencia', 0)} Giros"
+        )
+
+    if status_motor.get("ultima_atualizacao"):
+        st.caption(f"🕒 Último sincronismo: {status_motor.get('ultima_atualizacao')}")
+
+    st.markdown("---")
+    st.markdown("""
+    <div style="font-size:0.8rem; color:#6c757d; text-align:center;">
+        Versão 2.0 · Motor Refatorado
+    </div>
+    """, unsafe_allow_html=True)
 
 # ============================================================
-# INTERFACE PRINCIPAL
+# INTERFACE PRINCIPAL — ABAS RENOMEADAS COM ÍCONES
 # ============================================================
-st.title("🧠 MOTOR V1 - Deep Learning & Q-Learning")
-st.caption("Arquitetura ativa: MLP, Gradient Boosting, Markov multiescala, memórias contextuais e meta-confluência adaptativa.")
-
 aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
-    "🎯 TIPO B — Sinal Real",
-    "✅ Feedback e Correção",
-    "📊 TIPO D — Auditoria",
+    "🎯 Sinal Real",
+    "✅ Feedback & Correção",
+    "📊 Auditoria & Treino",
     "📈 Padrões Aprendidos",
-    "🧮 Cálculos Matemáticos Avançados"
+    "🧮 Cálculos Avançados"
 ])
 
 # =========================================================================
-# ABA TIPO B — SINAL REAL
+# ABA 1 — SINAL REAL (TIPO B)
 # =========================================================================
 with aba_tipo_b:
-    st.header("🎯 TIPO B - Predição via Redes Neurais e XGBoost")
-    st.info("O Juiz Preditivo agora utiliza pesos dinâmicos gerados por Machine Learning. O Agente RL (Q-Learning) gerencia ativamente as decisões para maximizar lucro.")
+    st.header("🎯 Predição via Redes Neurais e XGBoost")
+    st.caption("O Juiz Preditivo utiliza pesos dinâmicos gerados por Machine Learning. O Agente RL (Q-Learning) gerencia ativamente as decisões para maximizar lucro.")
 
-    entrada_numeros = st.text_input(
-        "Digite os 12 últimos números da sequência separados por vírgula:",
-        placeholder="Ex: 2,11,14,4,9,12,12,7,3,9,5,12",
-        key="input_sequencia_real"
-    )
+    with st.container():
+        col_input, col_btn = st.columns([3, 1])
+        with col_input:
+            entrada_numeros = st.text_input(
+                "Digite os 12 últimos números da sequência separados por vírgula:",
+                placeholder="Ex: 2,11,14,4,9,12,12,7,3,9,5,12",
+                key="input_sequencia_real"
+            )
+        with col_btn:
+            st.write("")  # espaçamento
+            st.write("")
+            btn_gerar = st.button("🚀 Executar Rede Neural", key="btn_gerar_sinal", use_container_width=True)
 
-    if st.button("🚀 Executar Rede Neural", key="btn_gerar_sinal"):
+    if btn_gerar:
         if not entrada_numeros:
             st.error("Por favor, insira uma sequência válida de números.")
         else:
             try:
-                # BLINDAGEM: Sanitização forte de frontend para impedir erro TypeError
                 raw_str = str(entrada_numeros).replace(';', ',').replace('-', ',').replace(' ', '')
                 lista_numeros = [int(x) for x in raw_str.split(",") if x.isdigit()]
                 
@@ -130,18 +260,19 @@ with aba_tipo_b:
                         "probabilidade_markov": resultado.get("probabilidade_markov", {"V":0, "P":0, "B":0})
                     }
 
-                    st.write("---")
-                    st.subheader("🔮 CARD DE DECISÃO OPERACIONAL DA IA")
+                    st.markdown("---")
+                    st.subheader("🔮 Card de Decisão Operacional")
 
+                    # Exibição do sinal com badge estilizado
                     if resultado.get("no_call"):
-                        st.error(f"🚨 **SINAL VETADO PELO AGENTE DE RISCO: NO CALL**")
-                        st.write(f"**Justificativa Analítica:** {resultado.get('justificativa')}")
+                        st.error("🚨 **SINAL VETADO PELO AGENTE DE RISCO: NO CALL**")
+                        st.info(f"**Justificativa:** {resultado.get('justificativa')}")
                     else:
                         sinal_final = resultado.get("sinal")
                         if sinal_final == "VERMELHO":
-                            st.markdown("<h2 style='color: #FF4B4B;'>🔴 SINAL: ENTRAR NO VERMELHO</h2>", unsafe_allow_html=True)
+                            st.markdown("<div class='signal-badge signal-vermelho'>🔴 SINAL: ENTRAR NO VERMELHO</div>", unsafe_allow_html=True)
                         elif sinal_final == "PRETO":
-                            st.markdown("<h2 style='color: #1E1E1E; background-color: #F0F2F6; padding: 10px; border-radius: 5px;'>⚫ SINAL: ENTRAR NO PRETO</h2>", unsafe_allow_html=True)
+                            st.markdown("<div class='signal-badge signal-preto'>⚫ SINAL: ENTRAR NO PRETO</div>", unsafe_allow_html=True)
                         else:
                             st.warning(f"⚪ **SINAL: {sinal_final}**")
 
@@ -149,31 +280,38 @@ with aba_tipo_b:
                         st.write(f"**Confiança Estatística da Rede:** {resultado.get('confianca_ia')}%")
                         
                         if resultado.get("kelly") is not None:
-                            st.success(f"💰 **Gestão de Risco (Half-Kelly Criterion):** Aporte sugerido de **{resultado.get('kelly')}% da sua banca** para esta entrada.")
+                            st.success(f"💰 **Gestão de Risco (Half-Kelly):** Aporte sugerido de **{resultado.get('kelly')}% da sua banca** para esta entrada.")
 
+                    # Métricas lado a lado
                     if resultado.get("entropia") is not None:
                         col_m1, col_m2 = st.columns(2)
                         with col_m1:
                             entropia_val = resultado.get('entropia', 0)
-                            st.metric(label="Entropia de Shannon (Nível de Caos)", value=f"{entropia_val} Bits", delta="Alta Imprevisibilidade" if entropia_val > 1.52 else "Mercado Estruturado", delta_color="inverse")
+                            st.metric(
+                                label="Entropia de Shannon (Nível de Caos)",
+                                value=f"{entropia_val} Bits",
+                                delta="Alta Imprevisibilidade" if entropia_val > 1.52 else "Mercado Estruturado",
+                                delta_color="inverse"
+                            )
                         with col_m2:
                             markov = resultado.get("probabilidade_markov", {"V": 0, "P": 0, "B": 0})
-                            st.metric(label="Probabilidade Pura (Cadeia de Markov)", value=f"V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
+                            st.metric(
+                                label="Probabilidade Pura (Cadeia de Markov)",
+                                value=f"V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%"
+                            )
 
                     if resultado.get("regime_recencia"):
                         with st.expander("📊 Regime de Recência Proporcional (Filtro Dinâmico)", expanded=True):
                             st.json(resultado["regime_recencia"])
 
+                    # Raridade
                     raridade_atual = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
                     with st.expander("🧮 Análise de Raridade da Janela Atual", expanded=False):
                         st.write(f"**Streak Atual Detectado:** {raridade_atual.get('streak')}x da cor {raridade_atual.get('cor_sequencia')}")
                         st.write(f"**Probabilidade Teórica de Continuação:** {raridade_atual.get('probabilidade')}%")
                         st.info(f"**Status Estrutural:** {raridade_atual.get('status')}")
 
-                    # ============================================================
-                    # AUDITORIA VISUAL — REGRAS OFICIAIS E CONTAGENS ATIVAS
-                    # Somente exibição. Não altera a geração ou arbitragem do sinal.
-                    # ============================================================
+                    # Auditoria de regras
                     try:
                         regras_oficiais_ativas = MotorContagensProjetivas.mapear_janela(
                             lista_numeros,
@@ -187,115 +325,51 @@ with aba_tipo_b:
                         )
 
                         with st.expander("🧠 Regras Oficiais e Contagens Ativas", expanded=True):
-                            st.caption(
-                                "Auditoria visual das evidências estruturais já analisadas pelo motor "
-                                "e encaminhadas à arbitragem do sinal."
-                            )
+                            st.caption("Auditoria visual das evidências estruturais já analisadas pelo motor e encaminhadas à arbitragem do sinal.")
 
                             st.markdown("### 📌 Evidências estruturais detectadas")
                             if regras_oficiais_ativas:
-                                for indice_regra, regra_ativa in enumerate(regras_oficiais_ativas, start=1):
-                                    direcao_regra = regra_ativa.get("direcao", "NEUTRO")
-                                    simbolo_direcao = "🔴" if direcao_regra == "VERMELHO" else (
-                                        "⚫" if direcao_regra == "PRETO" else "⚪"
-                                    )
-                                    st.markdown(
-                                        f"**{indice_regra}. {simbolo_direcao} "
-                                        f"{regra_ativa.get('tipo_regra', 'REGRA_NAO_IDENTIFICADA')}**"
-                                    )
-                                    st.write(
-                                        f"• Família: `{regra_ativa.get('familia', 'N/D')}`  "
-                                        f"| Origem: `{regra_ativa.get('origem', 'N/D')}`"
-                                    )
-                                    st.write(
-                                        f"• Direção: **{direcao_regra}**  "
-                                        f"| Peso: **{regra_ativa.get('peso', 'N/D')}**  "
-                                        f"| Validade: **{regra_ativa.get('validade', 'N/D')}**"
-                                    )
-                                    detalhes_regra = {
-                                        chave: valor
-                                        for chave, valor in regra_ativa.items()
-                                        if chave not in {
-                                            "direcao", "tipo_regra", "origem",
-                                            "peso", "familia", "validade"
-                                        }
-                                    }
-                                    if detalhes_regra:
-                                        st.json(detalhes_regra)
+                                for idx, regra in enumerate(regras_oficiais_ativas, 1):
+                                    direcao = regra.get("direcao", "NEUTRO")
+                                    simbolo = "🔴" if direcao == "VERMELHO" else ("⚫" if direcao == "PRETO" else "⚪")
+                                    st.markdown(f"**{idx}. {simbolo} {regra.get('tipo_regra', 'REGRA_NAO_IDENTIFICADA')}**")
+                                    st.write(f"• Família: `{regra.get('familia', 'N/D')}` | Origem: `{regra.get('origem', 'N/D')}`")
+                                    st.write(f"• Direção: **{direcao}** | Peso: **{regra.get('peso', 'N/D')}** | Validade: **{regra.get('validade', 'N/D')}**")
+                                    detalhes = {k: v for k, v in regra.items() if k not in ("direcao", "tipo_regra", "origem", "peso", "familia", "validade")}
+                                    if detalhes:
+                                        st.json(detalhes)
                                     st.markdown("---")
                             else:
-                                st.info(
-                                    "Nenhuma regra oficial com consequência ativa no fechamento "
-                                    "desta janela de 12 resultados."
-                                )
+                                st.info("Nenhuma regra oficial com consequência ativa no fechamento desta janela.")
 
                             st.markdown("### 🔢 Mapa completo das contagens projetivas")
                             if contagens_mapeadas:
-                                resumo_status_contagens = {}
-                                for contagem_item in contagens_mapeadas:
-                                    status_item = contagem_item.get("status", "DESCONHECIDO")
-                                    resumo_status_contagens[status_item] = (
-                                        resumo_status_contagens.get(status_item, 0) + 1
-                                    )
+                                resumo_status = {}
+                                for c in contagens_mapeadas:
+                                    status = c.get("status", "DESCONHECIDO")
+                                    resumo_status[status] = resumo_status.get(status, 0) + 1
 
                                 col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-                                with col_c1:
-                                    st.metric("Abertas", resumo_status_contagens.get("ABERTA", 0))
-                                with col_c2:
-                                    st.metric(
-                                        "Fechadas/Vivas",
-                                        resumo_status_contagens.get("FECHADA", 0)
-                                        + resumo_status_contagens.get("VIVA", 0)
-                                    )
-                                with col_c3:
-                                    st.metric("Pagas", resumo_status_contagens.get("PAGA", 0))
-                                with col_c4:
-                                    st.metric("Mortas", resumo_status_contagens.get("MORTA", 0))
+                                with col_c1: st.metric("Abertas", resumo_status.get("ABERTA", 0))
+                                with col_c2: st.metric("Fechadas/Vivas", resumo_status.get("FECHADA", 0) + resumo_status.get("VIVA", 0))
+                                with col_c3: st.metric("Pagas", resumo_status.get("PAGA", 0))
+                                with col_c4: st.metric("Mortas", resumo_status.get("MORTA", 0))
 
-                                for indice_contagem, contagem_item in enumerate(contagens_mapeadas, start=1):
-                                    numero_contagem = contagem_item.get("numero")
-                                    status_contagem = contagem_item.get("status", "DESCONHECIDO")
-                                    st.markdown(
-                                        f"**Contagem {indice_contagem} — Número {numero_contagem} "
-                                        f"— Status: `{status_contagem}`**"
-                                    )
-                                    st.write(
-                                        f"• Origem: R{contagem_item.get('origem_posicao')}  "
-                                        f"| Fechamento projetado: R{contagem_item.get('fechamento_posicao')}  "
-                                        f"| Casas exigidas: {contagem_item.get('casas_exigidas')}"
-                                    )
-                                    st.write(
-                                        f"• Coexistente: **{'SIM' if contagem_item.get('coexistente') else 'NÃO'}**  "
-                                        f"| Transicional: **{'SIM' if contagem_item.get('transicional') else 'NÃO'}**  "
-                                        f"| Assumida por: **{contagem_item.get('assumida_por') if contagem_item.get('assumida_por') is not None else 'NÃO'}**"
-                                    )
+                                for idx, c in enumerate(contagens_mapeadas, 1):
+                                    st.markdown(f"**Contagem {idx} — Número {c.get('numero')} — Status: `{c.get('status')}`**")
+                                    st.write(f"• Origem: R{c.get('origem_posicao')} | Fechamento: R{c.get('fechamento_posicao')} | Casas: {c.get('casas_exigidas')}")
+                                    st.write(f"• Coexistente: {'SIM' if c.get('coexistente') else 'NÃO'} | Transicional: {'SIM' if c.get('transicional') else 'NÃO'} | Assumida por: {c.get('assumida_por') or 'NÃO'}")
                                     st.markdown("---")
                             else:
                                 st.info("Nenhuma contagem projetiva de 1 a 7 foi aberta nesta janela.")
 
-                            familias_detectadas = sorted({
-                                regra.get("familia", "N/D")
-                                for regra in regras_oficiais_ativas
-                            })
+                            familias = sorted({r.get("familia", "N/D") for r in regras_oficiais_ativas})
                             st.markdown("### ⚖️ Leitura de arbitragem")
-                            st.write(
-                                f"**Famílias estruturais ativas:** "
-                                f"{', '.join(familias_detectadas) if familias_detectadas else 'NENHUMA'}"
-                            )
-                            st.write(
-                                f"**Regra vencedora registrada pelo sinal:** "
-                                f"`{resultado.get('regra_id', 'DESCONHECIDO')}`"
-                            )
-                            st.info(
-                                "As evidências podem coexistir e apontar direções diferentes. "
-                                "O painel não elimina regras concorrentes: mostra o mapa estrutural "
-                                "analisado pelo motor."
-                            )
-                    except Exception as erro_auditoria_regras:
-                        st.warning(
-                            "A geração do sinal foi concluída, mas a auditoria visual das regras "
-                            f"não pôde ser exibida. Detalhe: {erro_auditoria_regras}"
-                        )
+                            st.write(f"**Famílias estruturais ativas:** {', '.join(familias) if familias else 'NENHUMA'}")
+                            st.write(f"**Regra vencedora registrada pelo sinal:** `{resultado.get('regra_id', 'DESCONHECIDO')}`")
+                            st.info("As evidências podem coexistir e apontar direções diferentes. O painel não elimina regras concorrentes: mostra o mapa estrutural analisado pelo motor.")
+                    except Exception as e:
+                        st.warning(f"A geração do sinal foi concluída, mas a auditoria visual das regras não pôde ser exibida. Detalhe: {e}")
 
                     if resultado.get("raciocinio_trace"):
                         with st.expander("🔍 Auditoria de Raciocínio por Camadas Neurais", expanded=False):
@@ -304,11 +378,12 @@ with aba_tipo_b:
                                 st.write(f"• *Saída do Módulo:* `{camada.get('resultado')}`")
                                 st.write(f"• *Interpretação:* {camada.get('detalhe')}")
                                 st.markdown("---")
+
             except Exception as e:
                 st.error(f"🚨 Proteção de Crash Ativada: Ocorreu um erro ao gerar o sinal. Detalhe: {e}")
 
 # =========================================================================
-# ABA FEEDBACK — CORREÇÃO E ABSORÇÃO DE SINAL (REINFORCEMENT LEARNING)
+# ABA 2 — FEEDBACK E CORREÇÃO
 # =========================================================================
 with aba_feedback:
     st.header("✅ Reforço Preditivo (Q-Learning)")
@@ -317,7 +392,7 @@ with aba_feedback:
     if "ultimo_sinal" in st.session_state:
         st.info(f"📍 **Último Estado Computado:** Sequência `{st.session_state.ultimo_sinal['sequencia']}` ➔ Sinal Gerado: **{st.session_state.ultimo_sinal['sinal']}**")
     else:
-        st.warning("⚠️ O Agente RL precisa que um sinal seja gerado na aba 'TIPO B' para receber uma punição ou recompensa.")
+        st.warning("⚠️ O Agente RL precisa que um sinal seja gerado na aba 'Sinal Real' para receber uma punição ou recompensa.")
 
     col_f1, col_f2 = st.columns(2)
     with col_f1:
@@ -325,12 +400,11 @@ with aba_feedback:
     with col_f2:
         resultado_feedback = st.selectbox("Qual foi o resultado final?", ["G0 (Acerto no Alvo)", "G1 (Acerto 1º Gale)", "G2 (Risco Alto)", "LOSS / FALHA"])
 
-    if st.button("💾 Enviar Sinal de Recompensa/Punição ao Agente", key="btn_absorver_feedback"):
+    if st.button("💾 Enviar Sinal de Recompensa/Punição ao Agente", key="btn_absorver_feedback", use_container_width=True):
         if not entrada_feedback:
             st.error("Insira as correções da mesa.")
         else:
             try:
-                # BLINDAGEM DE DADOS: Sanitização agressiva para feedback
                 raw_str_fb = str(entrada_feedback).replace(';', ',').replace('-', ',').replace(' ', '')
                 lista_nums_feedback = [int(x) for x in raw_str_fb.split(",") if x.isdigit()]
                 
@@ -360,10 +434,10 @@ with aba_feedback:
                 st.error(f"🚨 Proteção de Crash Ativada: Formato inválido no feedback. Detalhe: {e}")
 
 # =========================================================================
-# ABA TIPO D — AUDITORIA E TREINAMENTO
+# ABA 3 — AUDITORIA E TREINAMENTO (TIPO D)
 # =========================================================================
 with aba_tipo_d:
-    st.header("📊 TIPO D - Auditoria Dinâmica e Treinamento Profundo")
+    st.header("📊 Auditoria Dinâmica e Treinamento Profundo")
     st.caption("Gerenciamento de bases de dados e recálculo das matrizes de transição probabilísticas.")
 
     arquivo_upload = st.file_uploader("Arraste ou envie seu arquivo Excel (.xlsx) contendo os resultados históricos:", type=["xlsx"])
@@ -380,11 +454,11 @@ with aba_tipo_d:
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            btn_recencia = st.button("⚡ Injetar como Recência Ativa (Prioridade Curto Prazo)")
+            btn_recencia = st.button("⚡ Injetar como Recência Ativa", use_container_width=True)
         with col2:
-            btn_substituir = st.button("💾 Substituir Base Definitiva de Longo Prazo")
+            btn_substituir = st.button("💾 Substituir Base Definitiva", use_container_width=True)
         with col3:
-            btn_adicionar = st.button("➕ Encadeamento Dinâmico (Anexar Dados)")
+            btn_adicionar = st.button("➕ Encadeamento Dinâmico", use_container_width=True)
 
         if btn_recencia:
             try:
@@ -393,7 +467,7 @@ with aba_tipo_d:
                     with open("base_recencia_ativa.xlsx", "wb") as f_rec:
                         f_rec.write(arquivo_upload.getvalue())
                         
-                    with st.spinner("Injetando pesos na recência E absorvendo para o Longo Prazo..."):
+                    with st.spinner("Injetando pesos na recência e absorvendo para o Longo Prazo..."):
                         resultado = motor.processar_recencia(dados)
                     st.success("✅ Recência acoplada com sucesso e absorvida pela Base Mestra!")
 
@@ -405,7 +479,7 @@ with aba_tipo_d:
                         motor_antigo = MotorV1Completo(dados)
                         output = motor_antigo.processar_auditoria()
                     
-                    st.subheader("📝 Memória de Cálculo e Taxas de Assertividade (G0, G1, G2)")
+                    st.subheader("📝 Memória de Cálculo e Taxas de Assertividade")
                     st.text_area("Log Completo da Auditoria Executada", output, height=400)
                 else:
                     st.error("Erro: A base de dados fornecida é muito pequena para estruturar um regime de recência consistente (Mínimo: 20 registros válidos).")
@@ -428,7 +502,6 @@ with aba_tipo_d:
             except Exception as e:
                 st.error(f"🚨 Proteção de Crash Ativada na Substituição: {e}")
 
-        # BLINDAGEM ESPECÍFICA DO ENCADEAMENTO DINÂMICO
         if btn_adicionar:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
@@ -458,13 +531,13 @@ with aba_tipo_d:
                 pass
 
 # =========================================================================
-# ABA PADRÕES — INSIGHTS DO MODELO APRENDIDO E RL
+# ABA 4 — PADRÕES APRENDIDOS
 # =========================================================================
 with aba_padroes:
     st.header("📈 Arquitetura Neural e Padrões Aprendidos")
     st.caption("Varredura profunda das memórias da Q-Table e dos Destrinchadores Numéricos Ativos.")
 
-    if st.button("🔄 Extrair Dumps de Memória da Rede Neural"):
+    if st.button("🔄 Extrair Dumps de Memória da Rede Neural", use_container_width=True):
         try:
             ia = carregar_modelo_longo_prazo()
             if ia is None:
@@ -485,7 +558,6 @@ with aba_padroes:
 
                 with st.expander("📐 Competência das Regras Oficiais e Contagens", expanded=False):
                     competencia_regras = getattr(ia, "regras_competencia_cronologica", {}) or {}
-
                     if competencia_regras:
                         grupos_regras = {
                             "🔢 Contagens Projetivas e Dinâmicas": {},
@@ -496,16 +568,9 @@ with aba_padroes:
                             "2️⃣ e 3️⃣ Ativadores e Regras V3": {},
                             "📚 Outras Regras Oficiais": {}
                         }
-
                         for nome_regra, stats_regra in competencia_regras.items():
                             nome_upper = str(nome_regra).upper()
-
-                            if (
-                                "COEXISTENCIA_CONTAGENS" in nome_upper
-                                or "TRANSICAO_CONTAGENS" in nome_upper
-                                or "CHANCE_DUPLA" in nome_upper
-                                or "FINALIZACAO_CONJUNTA" in nome_upper
-                            ):
+                            if "COEXISTENCIA_CONTAGENS" in nome_upper or "TRANSICAO_CONTAGENS" in nome_upper or "CHANCE_DUPLA" in nome_upper or "FINALIZACAO_CONJUNTA" in nome_upper:
                                 grupo = "🔢 Contagens Projetivas e Dinâmicas"
                             elif "HIERARQUIA_CONTAGEM" in nome_upper:
                                 grupo = "🏛️ Hierarquias de Contagem"
@@ -515,45 +580,24 @@ with aba_padroes:
                                 grupo = "🔟 Regra Oficial do 10"
                             elif "REGRA_5_10_" in nome_upper:
                                 grupo = "5️⃣ Regra Oficial 5-10"
-                            elif (
-                                "V3_ATIVADOR_2" in nome_upper
-                                or "V3_ATIVADOR_3" in nome_upper
-                            ):
+                            elif "V3_ATIVADOR_2" in nome_upper or "V3_ATIVADOR_3" in nome_upper:
                                 grupo = "2️⃣ e 3️⃣ Ativadores e Regras V3"
                             elif "V3_ATIVADOR_" in nome_upper:
                                 grupo = "🔢 Contagens Projetivas e Dinâmicas"
                             else:
                                 grupo = "📚 Outras Regras Oficiais"
-
                             grupos_regras[grupo][nome_regra] = stats_regra
 
                         for nome_grupo, regras_grupo in grupos_regras.items():
-                            if not regras_grupo:
-                                continue
-
+                            if not regras_grupo: continue
                             st.markdown(f"### {nome_grupo}")
                             for nome_regra, stats_regra in sorted(regras_grupo.items()):
                                 total_validacao = int(stats_regra.get("total_validacao", 0))
                                 g0 = int(stats_regra.get("g0", 0))
                                 g1 = int(stats_regra.get("g1", 0))
-                                acertos_g0_g1 = int(
-                                    stats_regra.get("acertos_g0_g1", g0 + g1)
-                                )
-                                taxa_g0_g1 = float(
-                                    stats_regra.get(
-                                        "taxa_g0_g1",
-                                        (acertos_g0_g1 / total_validacao * 100)
-                                        if total_validacao > 0 else 0.0
-                                    )
-                                )
-
-                                st.write(
-                                    f"**{nome_regra}:** "
-                                    f"Total Validação: {total_validacao} | "
-                                    f"G0: {g0} | G1: {g1} | "
-                                    f"Acertos G0/G1: {acertos_g0_g1} ➔ "
-                                    f"**Taxa G0/G1: {taxa_g0_g1:.2f}%**"
-                                )
+                                acertos_g0_g1 = int(stats_regra.get("acertos_g0_g1", g0 + g1))
+                                taxa_g0_g1 = float(stats_regra.get("taxa_g0_g1", (acertos_g0_g1 / total_validacao * 100) if total_validacao > 0 else 0.0))
+                                st.write(f"**{nome_regra}:** Total Validação: {total_validacao} | G0: {g0} | G1: {g1} | Acertos G0/G1: {acertos_g0_g1} ➔ **Taxa G0/G1: {taxa_g0_g1:.2f}%**")
                             st.markdown("---")
                     else:
                         st.info("A competência cronológica das regras oficiais e contagens ainda não foi treinada na base longa.")
@@ -658,7 +702,7 @@ with aba_padroes:
             st.error(f"🚨 Proteção de Crash Ativada na extração de memória: {e}")
 
 # =========================================================================
-# ABA MATEMÁTICA — ENGINE MATEMÁTICO AVANÇADO
+# ABA 5 — CÁLCULOS MATEMÁTICOS AVANÇADOS
 # =========================================================================
 with aba_matematica:
     st.header("🧮 Engine Estatístico Independente")
@@ -704,3 +748,11 @@ with aba_matematica:
     except Exception as e:
         st.error(f"🚨 Proteção de Crash Ativada no Simulador de Cobertura: {e}")
 
+# ============================================================
+# RODAPÉ
+# ============================================================
+st.markdown("""
+<div class="footer">
+    MOTOR V1 · Deep Learning para Roleta · Versão 2.0 · 🧠 Todos os direitos reservados
+</div>
+""", unsafe_allow_html=True)
