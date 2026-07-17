@@ -1,5 +1,9 @@
 from collections import defaultdict
 from utils.helpers import hash_chave
+# ===== IMPORTAÇÕES ADICIONADAS =====
+from rules.analisador import AnalisadorContextoAvancado
+from rules.contagens import MotorContagensProjetivas
+# ===================================
 
 class TrajetoriasMixin:
     """
@@ -541,8 +545,6 @@ class TrajetoriasMixin:
                 )
 
         # MAIN 128 — morfologia interna da STREAK sem criar uma nova família/voto.
-        # DNA de deslocamento, trajetória de deltas e gramática de blocos apenas
-        # condicionam a autoridade da família STREAK já existente.
         dna = d.get("dna_deslocamento", {}) or {}
         if dna.get("ativo"):
             chaves.extend([
