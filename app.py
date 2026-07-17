@@ -172,7 +172,7 @@ aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
 ])
 
 # ============================================================
-# ABA 1 — SINAL REAL (TODOS OS RELATÓRIOS RESTAURADOS 100%)
+# ABA 1 — SINAL REAL (TODOS OS RELATÓRIOS RESTAURADOS)
 # ============================================================
 with aba_tipo_b:
     st.header("🎯 Sinal Real — Predição Neural")
@@ -448,7 +448,7 @@ with aba_feedback:
                 st.error(f"Erro: {e}")
 
 # ============================================================
-# ABA 3 — AUDITORIA (COMPLETA)
+# ABA 3 — AUDITORIA (COM RELATÓRIO DE RECÊNCIA COMPLETO)
 # ============================================================
 with aba_tipo_d:
     st.header("📊 Auditoria Dinâmica e Treinamento")
@@ -474,49 +474,72 @@ with aba_tipo_d:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
                 if dados and len(dados) >= 20:
-                    with open("base_recencia_ativa.xlsx", "wb") as f:
-                        f.write(arquivo_upload.getvalue())
-                    with st.spinner("Processando recência..."):
+                    with open("base_recencia_ativa.xlsx", "wb") as f_rec:
+                        f_rec.write(arquivo_upload.getvalue())
+                        
+                    with st.spinner("Injetando pesos na recência e absorvendo para o Longo Prazo..."):
                         resultado = motor.processar_recencia(dados)
-                    st.success("✅ Recência injetada!")
-                    if resultado.get("regime_recencia"):
-                        st.json(resultado["regime_recencia"])
+                    st.success("✅ Recência acoplada com sucesso e absorvida pela Base Mestra!")
+
+                    # === RELATÓRIO DO REGIME INJETADO (expanded=True) ===
+                    if resultado and isinstance(resultado, dict) and resultado.get("regime_recencia"):
+                        with st.expander("📊 Relatório de Análise do Regime Injetado", expanded=True):
+                            st.json(resultado["regime_recencia"])
+
+                    # === AUDITORIA CRONOLÓGICA DAS JANELAS (LOG COMPLETO) ===
+                    with st.spinner("Simulando auditoria cronológica das janelas móveis..."):
+                        motor_antigo = MotorV1Completo(dados)
+                        output = motor_antigo.processar_auditoria()
+                    
+                    # Conta o número de janelas a partir do output
+                    linhas = output.split("\n")
+                    janelas = [linha for linha in linhas if "Janela" in linha]
+                    num_janelas = len(janelas)
+                    
+                    st.subheader(f"📝 Memória de Cálculo e Taxas de Assertividade (G0, G1, G2) — {num_janelas} janelas analisadas")
+                    st.text_area("Log Completo da Auditoria Executada", output, height=500, key="auditoria_log_recencia")
                 else:
-                    st.error("Mínimo 20 registros válidos.")
+                    st.error("Erro: A base de dados fornecida é muito pequena para estruturar um regime de recência consistente (Mínimo: 20 registros válidos).")
             except Exception as e:
-                st.error(f"Erro: {e}")
+                st.error(f"🚨 Proteção de Crash Ativada na Recência: {e}")
 
         if btn_substituir:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
                 if dados:
-                    with st.spinner("Substituindo base..."):
+                    with st.spinner("Substituindo a base definitiva e retreinando os modelos contextuais..."):
                         rel = motor.absorver_base_longa(dados)
-                    if rel and rel.get("sucesso"):
-                        st.success("✅ Base substituída!")
+                    if rel and isinstance(rel, dict) and rel.get("sucesso"):
+                        st.success("✅ Base definitiva substituída no XLS e modelos retreinados com sucesso!")
                         st.json(rel)
                     else:
-                        st.error(f"Erro: {rel.get('mensagem')}")
+                        st.error(f"Falha ao substituir base: {rel.get('mensagem') if isinstance(rel, dict) else 'Erro desconhecido'}")
                 else:
-                    st.error("Dados inválidos.")
+                    st.error("Erro ao validar ou ler os registros do arquivo fornecido.")
             except Exception as e:
-                st.error(f"Erro: {e}")
+                st.error(f"🚨 Proteção de Crash Ativada na Substituição: {e}")
 
         if btn_adicionar:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
                 if dados:
-                    with st.spinner("Anexando dados..."):
+                    with st.spinner("Processando lote incremental sem recarregar a base XLS no motor..."):
                         rel = motor.processar_novo_lote(dados)
-                    if rel and rel.get("sucesso"):
-                        st.success("✅ Dados anexados!")
+
+                    del dados
+                    gc.collect()
+
+                    if rel and isinstance(rel, dict) and rel.get("sucesso"):
+                        st.success("✅ Registros acoplados à base definitiva e persistidos no modelo pkl com sucesso!")
                         st.json(rel)
                     else:
-                        st.error(f"Erro: {rel.get('mensagem')}")
+                        erro_ms = rel.get("mensagem") if isinstance(rel, dict) else "Retorno nulo da camada de salvamento."
+                        st.error(f"Falha no Encadeamento: {erro_ms}")
                 else:
-                    st.error("Dados inválidos.")
+                    st.error("Erro: Nenhum dado numérico válido encontrado no arquivo enviado para encadeamento.")
             except Exception as e:
-                st.error(f"Erro: {e}")
+                gc.collect()
+                st.error(f"🚨 Erro crítico no Encadeamento Dinâmico: {type(e).__name__}: {e}")
                 st.exception(e)
         
         if os.path.exists(caminho_temp):
