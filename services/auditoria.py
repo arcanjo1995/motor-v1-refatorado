@@ -1,14 +1,20 @@
-import json
-from data.persistence import carregar_modelo_longo_prazo
+import os
+from collections import defaultdict
+from data.leitor_xls import LeitorXLS
+from services.motor_unificado import motor_unificado
+from utils.helpers import fabrica_historico_regras_auditado
 from core.motor_analise import MotorAnalise
 from core.juiz_hierarquico import JuizHierarquicoModificado
 from ml_engine.preditor_base import IAPreditivaV1
 
-class MotorV1Completo:
-    """
-    Motor completo para auditoria cronológica (Walk-Forward).
-    """
-    
+class SequenciaOperacional:
+    def __init__(self, lista_resultados):
+        self.cronologia = lista_resultados
+        self.numerica = [int(r['numero']) for r in self.cronologia]
+        self.polaridades = [str(r['cor']).upper() for r in self.cronologia]
+        self.total = len(self.numerica)
+
+
 class MotorV1Completo:
     def __init__(self, lista_dados_xls, ia_existente=None):
         self.seq = SequenciaOperacional(lista_dados_xls)
@@ -23,8 +29,10 @@ class MotorV1Completo:
         else:
             base_recencia = None
             if os.path.exists("base_recencia_ativa.xlsx"):
-                try: base_recencia = LeitorXLS("base_recencia_ativa.xlsx").ler_e_validar()
-                except: pass
+                try: 
+                    base_recencia = LeitorXLS("base_recencia_ativa.xlsx").ler_e_validar()
+                except: 
+                    pass
             self.ia = IAPreditivaV1(self.dados_longo, base_recencia if base_recencia else [])
             
         self.historico_regras = defaultdict(fabrica_historico_regras_auditado)
@@ -37,7 +45,6 @@ class MotorV1Completo:
         stats = {"G0": 0, "G1": 0, "G2": 0, "FALHA": 0, "NO CALL": 0}
 
         # MAIN 72: auditoria contrafactual do filtro discriminativo.
-        # Mede o destino real da direção pré-veto sem alterar a decisão do motor.
         cf_total_vetado = 0
         cf_total_preservado = 0
         cf_vetados = {"G0": 0, "G1": 0, "G2": 0, "FALHA": 0}
@@ -114,12 +121,7 @@ class MotorV1Completo:
                         salto = g + 1
                         break
 
-            # =========================================================
-            # MAIN 72 — AUDITORIA CONTRAFACTUAL DO FILTRO DISCRIMINATIVO
-            # =========================================================
-            # Reclassifica apenas para medição a direção existente ANTES do
-            # filtro. Não substitui "sinal", "classificacao", "salto" ou qualquer
-            # decisão operacional já tomada pelo motor.
+            # AUDITORIA CONTRAFACTUAL
             avaliacao_cf = getattr(self.ia, "_ultima_avaliacao_filtro_discriminativo", None)
             direcao_cf = getattr(self.ia, "_ultima_direcao_pre_filtro_discriminativo", None)
 
@@ -187,15 +189,10 @@ class MotorV1Completo:
 
             stats[classificacao] = stats.get(classificacao, 0) + 1
 
-            # =========================================================
-            # APRENDIZADO DURANTE AUDITORIA
-            # Walk-forward congelado: mede sem alterar IA, Q-Table,
-            # memória de vencedores, histórico de regras ou transições.
-            # =========================================================
+            # Aprendizado (se habilitado)
             if aprender_durante_auditoria:
                 if self.ia is not None:
                     entropia_shannon_atual = analise.get("entropia", 0.0)
-
                     estado_rl_historico = self.ia.construir_estado_q_contextual(
                         sub_num,
                         sub_pol,
@@ -204,18 +201,9 @@ class MotorV1Completo:
                         probabilidade_markov=analise.get("probabilidade_markov")
                     )
                     acao_rl_historico = "APOSTAR" if sinal != "NO CALL" else "NO_CALL"
-                    
-                    recompensa = 0.0
-                    if classificacao in ["G0", "G1"]:
-                        recompensa = 1.0
-                    elif classificacao == "G2":
-                        recompensa = -0.5
-                    elif classificacao == "FALHA":
-                        recompensa = -2.0
-                        
+                    recompensa = 1.0 if classificacao in ["G0", "G1"] else (-0.5 if classificacao == "G2" else (-2.0 if classificacao == "FALHA" else 0.0))
                     self.ia.atualizar_q_learning(estado_rl_historico, acao_rl_historico, recompensa)
-                # =========================================================
-    
+                
                 if classificacao in ["G0", "G1"]:
                     contexto_analise = {
                         "geometria": analise.get("geometria"),
@@ -246,15 +234,13 @@ class MotorV1Completo:
                     "geometria": analise.get("geometria", "ESTÁVEL")
                 }
                 self.ia.injetar_aprendizado_imediato(bloco, 4, contexto_injecao, salvar_na_recencia=False)
+
             memorias.append(f"Janela {len(memorias)+1}: {sub_num} -> {sinal} | {justificativa} | {classificacao}")
             idx += 12 + salto
 
         g0_g1_vetados = cf_vetados.get("G0", 0) + cf_vetados.get("G1", 0)
         g2_falha_evitados = cf_vetados.get("G2", 0) + cf_vetados.get("FALHA", 0)
-        eficiencia_veto = (
-            (g2_falha_evitados / cf_total_vetado) * 100
-            if cf_total_vetado > 0 else 0.0
-        )
+        eficiencia_veto = (g2_falha_evitados / cf_total_vetado) * 100 if cf_total_vetado > 0 else 0.0
 
         self.auditoria_contrafactual_filtro_discriminativo = {
             "ativo": True,
@@ -278,22 +264,14 @@ class MotorV1Completo:
             "CONTEXTOS_CARTOGRAFIA_CONSULTADOS": cf_contextos_cartografia_consultados,
             "CONTEXTOS_CARTOGRAFIA_RISCO_ALTO": cf_contextos_cartografia_risco_alto,
             "VETOS_POR_CARTOGRAFIA": cf_vetos_por_cartografia,
-            "G0_G1_VETADOS_CARTOGRAFIA": (
-                cf_cartografia_vetados.get("G0", 0) + cf_cartografia_vetados.get("G1", 0)
-            ),
-            "G2_FALHA_EVITADOS_CARTOGRAFIA": (
-                cf_cartografia_vetados.get("G2", 0) + cf_cartografia_vetados.get("FALHA", 0)
-            ),
+            "G0_G1_VETADOS_CARTOGRAFIA": cf_cartografia_vetados.get("G0", 0) + cf_cartografia_vetados.get("G1", 0),
+            "G2_FALHA_EVITADOS_CARTOGRAFIA": cf_cartografia_vetados.get("G2", 0) + cf_cartografia_vetados.get("FALHA", 0),
             "CARTOGRAFIA_VETADOS_G0": cf_cartografia_vetados.get("G0", 0),
             "CARTOGRAFIA_VETADOS_G1": cf_cartografia_vetados.get("G1", 0),
             "CARTOGRAFIA_VETADOS_G2": cf_cartografia_vetados.get("G2", 0),
             "CARTOGRAFIA_VETADOS_FALHA": cf_cartografia_vetados.get("FALHA", 0),
-            "RISCO_MEDIO_VETADOS_PERCENT": round(
-                sum(cf_riscos_vetados) / len(cf_riscos_vetados), 2
-            ) if cf_riscos_vetados else 0.0,
-            "RISCO_MEDIO_PRESERVADOS_PERCENT": round(
-                sum(cf_riscos_preservados) / len(cf_riscos_preservados), 2
-            ) if cf_riscos_preservados else 0.0,
+            "RISCO_MEDIO_VETADOS_PERCENT": round(sum(cf_riscos_vetados) / len(cf_riscos_vetados), 2) if cf_riscos_vetados else 0.0,
+            "RISCO_MEDIO_PRESERVADOS_PERCENT": round(sum(cf_riscos_preservados) / len(cf_riscos_preservados), 2) if cf_riscos_preservados else 0.0,
             "altera_sinal_operacional": False
         }
 
@@ -311,7 +289,6 @@ class MotorV1Completo:
         }
         total_janelas = sum(stats.values())
         denom = total_janelas if total_janelas > 0 else 1
-        sinais_liberados = stats.get("G0", 0) + stats.get("G1", 0) + stats.get("G2", 0) + stats.get("FALHA", 0)
         g0_g1_liberados = stats.get("G0", 0) + stats.get("G1", 0)
         g2_falha_liberados = stats.get("G2", 0) + stats.get("FALHA", 0)
         baseline_g0_g1 = 78.22
@@ -342,6 +319,5 @@ class MotorV1Completo:
             condicao = "MERCADO PAGADOR"
         else:
             condicao = "MERCADO INSTÁVEL"
-            
         output += f"ESTADO ATUAL DO MERCADO: {condicao}\n"
         return output
