@@ -1,8 +1,10 @@
 import numpy as np
 from collections import defaultdict
 from utils.helpers import hash_chave
+from config.settings import VERSAO_CHAVES_HASH   # <-- ADICIONADO
 from rules.analisador import AnalisadorContextoAvancado
 from rules.contagens import MotorContagensProjetivas
+
 
 class CartografiaMixin:
     """
@@ -62,6 +64,7 @@ class CartografiaMixin:
         if not getattr(self, "ml_hmm", None):
             return "HMM_INDISPONIVEL"
         try:
+            import numpy as np
             c_map = {"P": 0, "V": 1, "B": 2}
             seq = np.asarray(
                 [[c_map.get(str(c).upper(), 2)] for c in sub_pol],
@@ -437,6 +440,7 @@ class CartografiaMixin:
                 if rp in ("G0", "G1"):
                     st[f"P_{rp.lower()}"] += 1
         return dict(mapa)
+
     def _chaves_cartografia_contextual_regra(self, sub_num, sub_pol):
         """
         Gera níveis de backoff por REGRA/CONTAGEM. A ativação atual continua vindo
@@ -701,6 +705,7 @@ class CartografiaMixin:
         }
         self.ultima_leitura_regra_contextual = resultado
         return resultado
+
     def _chaves_trajetoria_projecao(self, numero, traj_num, traj_pol):
         """Destrincha cada contagem vermelha 1..7 por posição, números e fechamento."""
         if not traj_num or not traj_pol:
