@@ -10,14 +10,18 @@ import math
 import gc
 from collections import defaultdict
 
-# Importações internas (certifique-se de que os caminhos estão corretos)
-from core.preditor_base import IAPreditivaV1
+# Importações corrigidas para a estrutura atual
+from ml_engine.preditor_base import IAPreditivaV1
 from core.motor_analise import MotorAnalise
 from core.juiz_hierarquico import JuizHierarquicoModificado
-from core.leitor_xls import LeitorXLS
-from core.persistence import salvar_modelo_longo_prazo, carregar_modelo_longo_prazo
-from core.settings import NOME_BASE_DEFINITIVA, VERSAO_CHAVES_HASH
-from core.helpers import fabrica_historico_regras_auditado
+from data.leitor_xls import LeitorXLS
+from data.persistence import salvar_modelo_longo_prazo, carregar_modelo_longo_prazo
+from config.settings import NOME_BASE_DEFINITIVA, VERSAO_CHAVES_HASH
+from utils.helpers import fabrica_historico_regras_auditado
+
+# Importações adicionais necessárias para funções internas
+from rules.contagens import MotorContagensProjetivas
+from rules.analisador import AnalisadorContextoAvancado
 
 # ============================================================
 # FUNÇÕES GLOBAIS (estavam no main 152)
