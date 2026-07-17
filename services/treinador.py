@@ -1,5 +1,3 @@
-# services/treinador.py
-
 import os
 import time
 import json
@@ -24,13 +22,10 @@ def analisar_regime_recencia(dados_recencia):
             "streak_medio": 0,
             "confianca_regime": 0
         }
-    
     janela_termometro = min(len(dados_recencia), 100)
     recorte_termometro = dados_recencia[-janela_termometro:]
-    
     cores = [d['cor'] for d in recorte_termometro]
     total = len(cores)
-    
     if total == 0:
         return {
             "viés_atual": "INDEFINIDO",
@@ -39,22 +34,18 @@ def analisar_regime_recencia(dados_recencia):
             "streak_medio": 0,
             "confianca_regime": 0
         }
-        
     v = cores.count('V')
     p = cores.count('P')
     pct_v = (v / total) * 100
     pct_p = (p / total) * 100
-    
     if pct_v >= 52.5:
         viés = "VERMELHO"
     elif pct_p >= 52.5:
         viés = "PRETO"
     else:
         viés = "EQUILIBRADO"
-        
     alternancias = sum(1 for i in range(1, total) if cores[i] != cores[i-1] and cores[i] != 'B' and cores[i-1] != 'B')
     xadrez_freq = (alternancias / (total - 1)) * 100 if total > 1 else 0
-    
     streaks = []
     atual = 1
     for i in range(1, total):
@@ -64,18 +55,14 @@ def analisar_regime_recencia(dados_recencia):
             if atual >= 2:
                 streaks.append(atual)
             atual = 1
-            
     streak_medio = sum(streaks) / len(streaks) if streaks else 0
-    
     if xadrez_freq >= 55.0:
         modo = "XADREZ_DOMINANTE"
     elif streak_medio >= 3.0:
         modo = "STREAK_DOMINANTE"
     else:
         modo = "MISTO"
-        
     confianca = min(85, int(abs(pct_v - 50) + abs(pct_p - 50)))
-    
     return {
         "viés_atual": viés,
         "modo_dominante": modo,
@@ -88,7 +75,6 @@ def analisar_regime_recencia(dados_recencia):
 
 
 def integrar_recencia_no_modelo(dados_recencia, multiplicador=6):
-    """Integra recência na instância ativa com peso oficial 6, sem persistir reinjeções."""
     multiplicador = 6
     ia = carregar_modelo_longo_prazo()
     if ia is None:
@@ -108,7 +94,11 @@ def integrar_recencia_no_modelo(dados_recencia, multiplicador=6):
     return ia
 
 
-def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False):
+def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False, auditoria=True):
+    """
+    Adiciona novos dados à base longa.
+    Se auditoria=False, pula a walk-forward (mais rápido para grandes volumes).
+    """
     if not novos_dados:
         return {"sucesso": False, "mensagem": "Nenhum dado novo foi fornecido."}
     base_existente = []
@@ -118,20 +108,19 @@ def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False):
         except:
             return {"sucesso": False, "mensagem": "Não foi possível ler a base antiga."}
 
-    # AUDITORIA WALK-FORWARD: mede os dados novos com o modelo histórico congelado.
     auditoria_walk_forward = None
     modelo_historico = carregar_modelo_longo_prazo()
 
     if modelo_historico is None and len(base_existente) >= 30:
         modelo_historico = IAPreditivaV1(base_existente, [])
 
-    # MAIN 133 — feedback ao vivo não dispara auditoria walk-forward.
+    # ===== MODIFICAÇÃO: só executa auditoria se auditoria=True =====
     if (
         not origem_feedback_ao_vivo
+        and auditoria
         and modelo_historico is not None
         and len(novos_dados) >= 13
     ):
-        # Import local para evitar circularidade
         from services.auditoria import MotorV1Completo
 
         contexto_historico = base_existente[-12:] if base_existente else []
@@ -162,7 +151,6 @@ def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False):
             pass
     try:
         df = pd.DataFrame([{"numero": d["numero"], "cor": d["cor"]} for d in dados_combinados])
-        # Persistência oficial NOVO -> ANTIGO; LeitorXLS reconstrói ANTIGO -> NOVO.
         df = df.iloc[::-1].reset_index(drop=True)
         df.to_excel(NOME_BASE_DEFINITIVA, index=False)
     except Exception as e:
@@ -271,7 +259,6 @@ def _absorver_cartografia_completa_incremental(ia, dados_combinados, inicio_novo
     total = len(dados_combinados)
     eventos_padrao_novos = 0
     eventos_projecao_novos = 0
-
     for i in range(max(0, inicio_novos - 2), total - 2):
         inicio = max(0, i - 11)
         sub = dados_combinados[inicio:i + 1]
@@ -279,7 +266,6 @@ def _absorver_cartografia_completa_incremental(ia, dados_combinados, inicio_novo
         sub_pol = [str(d["cor"]).upper() for d in sub]
         c0 = str(dados_combinados[i + 1]["cor"]).upper()
         c1 = str(dados_combinados[i + 2]["cor"]).upper()
-
         for chave in ia._chaves_cartografia_padrao(sub_num, sub_pol):
             st = ia.cartografia_padroes_xls[chave]
             st["total"] += 1
@@ -287,20 +273,14 @@ def _absorver_cartografia_completa_incremental(ia, dados_combinados, inicio_novo
                 st["B_g0"] += 1
             rv = ia._resultado_ate_g1(c0, c1, "V")
             rp = ia._resultado_ate_g1(c0, c1, "P")
-            if rv == "G0":
-                st["V_g0"] += 1
-            elif rv == "G1":
-                st["V_g1"] += 1
-            if rp == "G0":
-                st["P_g0"] += 1
-            elif rp == "G1":
-                st["P_g1"] += 1
-
+            if rv == "G0": st["V_g0"] += 1
+            elif rv == "G1": st["V_g1"] += 1
+            if rp == "G0": st["P_g0"] += 1
+            elif rp == "G1": st["P_g1"] += 1
         ia._registrar_cartografia_contextual_padrao(sub_num, sub_pol, c0, c1)
         ia._registrar_trajetoria_streak(sub_num, sub_pol, c0, c1)
         ia._registrar_morfologia_estrutural(sub_num, sub_pol, c0, c1)
         eventos_padrao_novos += 1
-
     for i in range(max(0, inicio_novos - 8), total):
         num_gatilho = int(dados_combinados[i]["numero"])
         if not 1 <= num_gatilho <= 7:
@@ -323,14 +303,10 @@ def _absorver_cartografia_completa_incremental(ia, dados_combinados, inicio_novo
         for chave in ia._chaves_trajetoria_projecao(num_gatilho, traj_num, traj_pol):
             st = ia.cartografia_projecoes_trajetoria[chave]
             st["total"] += 1
-            if resultado == "G0":
-                st["respeitada_g0"] += 1
-            elif resultado == "G1":
-                st["respeitada_g1"] += 1
-            else:
-                st["nao_respeitada"] += 1
+            if resultado == "G0": st["respeitada_g0"] += 1
+            elif resultado == "G1": st["respeitada_g1"] += 1
+            else: st["nao_respeitada"] += 1
         eventos_projecao_novos += 1
-
     metricas = getattr(ia, "cartografia_xls_metricas", {}) or {}
     metricas["eventos_padrao_analisados"] = int(metricas.get("eventos_padrao_analisados", 0)) + eventos_padrao_novos
     metricas["eventos_projecoes_1_a_7_analisados"] = int(metricas.get("eventos_projecoes_1_a_7_analisados", 0)) + eventos_projecao_novos
@@ -346,13 +322,11 @@ def _absorver_regras_contextuais_incremental(ia, dados_combinados, inicio_novos)
     ocorrencias = 0
     diretas = 0
     detector_12 = 0
-
     for i in range(max(0, inicio_novos - 3), len(dados_combinados) - 3):
         inicio = max(0, i - 11)
         sub_num = numeros[inicio:i + 1]
         sub_pol = cores[inicio:i + 1]
         posicoes += 1
-
         eventos_diretos = ia._eventos_regras_oficiais_cronologicos_no_indice(
             numeros, cores, i
         )
@@ -368,7 +342,6 @@ def _absorver_regras_contextuais_incremental(ia, dados_combinados, inicio_novos)
         eventos = eventos_diretos + eventos_detector
         if not eventos:
             continue
-
         ocorrencias += ia._registrar_cartografia_contextual_regra(
             sub_num, sub_pol,
             cores[i + 1], cores[i + 2], cores[i + 3],
@@ -376,7 +349,6 @@ def _absorver_regras_contextuais_incremental(ia, dados_combinados, inicio_novos)
         )
         diretas += len(eventos_diretos)
         detector_12 += len(eventos_detector)
-
     bases = [
         st for chave, st in ia.cartografia_regras_contextual.items()
         if chave.count("|") == 1
@@ -422,7 +394,6 @@ def _absorver_markov_incremental(ia, dados_combinados, inicio_novos):
 
 def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novos):
     total_dados = len(dados_combinados)
-
     for i in range(max(0, inicio_novos - 8), total_dados):
         num = int(dados_combinados[i]["numero"])
         if not 1 <= num <= 7:
@@ -438,13 +409,9 @@ def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novo
             continue
         cor_alvo = str(dados_combinados[alvo_idx]["cor"]).upper()
         cor_g1 = str(dados_combinados[alvo_idx + 1]["cor"]).upper()
-        if cor_alvo in ("V", "B"):
-            resultado = "G0"
-        elif cor_g1 in ("V", "B"):
-            resultado = "G1"
-        else:
-            resultado = "NAO_RESPEITADA"
-
+        if cor_alvo in ("V", "B"): resultado = "G0"
+        elif cor_g1 in ("V", "B"): resultado = "G1"
+        else: resultado = "NAO_RESPEITADA"
         stats_global = ia.estatisticas_projecoes_globais[num]
         stats_respeito = ia.estatisticas_projecoes_respeito[num]
         stats_global["total"] += 1
@@ -458,7 +425,6 @@ def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novo
         else:
             stats_global["falha"] += 1
             stats_respeito["nao_respeitada"] += 1
-
         inicio_ctx = max(0, alvo_idx - 11)
         pol_ctx = [
             str(d["cor"]).upper()
@@ -468,13 +434,9 @@ def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novo
             chave_ctx = ia._chave_respeito_projecao(num, pol_ctx)
             stats_ctx = ia.projecoes_respeito_contextual[chave_ctx]
             stats_ctx["total"] += 1
-            if resultado == "G0":
-                stats_ctx["respeitada_g0"] += 1
-            elif resultado == "G1":
-                stats_ctx["respeitada_g1"] += 1
-            else:
-                stats_ctx["nao_respeitada"] += 1
-
+            if resultado == "G0": stats_ctx["respeitada_g0"] += 1
+            elif resultado == "G1": stats_ctx["respeitada_g1"] += 1
+            else: stats_ctx["nao_respeitada"] += 1
     for i in range(max(0, inicio_novos - 2), total_dados - 2):
         c0 = str(dados_combinados[i + 1]["cor"]).upper()
         c1 = str(dados_combinados[i + 2]["cor"]).upper()
@@ -482,27 +444,18 @@ def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novo
             bigrama = f"{dados_combinados[i-1]['numero']}-{dados_combinados[i]['numero']}"
             st = ia.estatisticas_bigramas_globais[bigrama]
             st["total"] += 1
-            if c0 in ("V", "B"):
-                st["V_g0"] += 1
-            elif c1 in ("V", "B"):
-                st["V_g1"] += 1
-            if c0 in ("P", "B"):
-                st["P_g0"] += 1
-            elif c1 in ("P", "B"):
-                st["P_g1"] += 1
+            if c0 in ("V", "B"): st["V_g0"] += 1
+            elif c1 in ("V", "B"): st["V_g1"] += 1
+            if c0 in ("P", "B"): st["P_g0"] += 1
+            elif c1 in ("P", "B"): st["P_g1"] += 1
         if i >= 2:
             trigrama = f"{dados_combinados[i-2]['numero']}-{dados_combinados[i-1]['numero']}-{dados_combinados[i]['numero']}"
             st = ia.estatisticas_trigramas_globais[trigrama]
             st["total"] += 1
-            if c0 in ("V", "B"):
-                st["V_g0"] += 1
-            elif c1 in ("V", "B"):
-                st["V_g1"] += 1
-            if c0 in ("P", "B"):
-                st["P_g0"] += 1
-            elif c1 in ("P", "B"):
-                st["P_g1"] += 1
-
+            if c0 in ("V", "B"): st["V_g0"] += 1
+            elif c1 in ("V", "B"): st["V_g1"] += 1
+            if c0 in ("P", "B"): st["P_g0"] += 1
+            elif c1 in ("P", "B"): st["P_g1"] += 1
     for fim in range(max(11, inicio_novos - 2), total_dados - 2):
         janela_num = [int(d["numero"]) for d in dados_combinados[fim - 11:fim + 1]]
         janela_pol = [str(d["cor"]).upper() for d in dados_combinados[fim - 11:fim + 1]]
@@ -517,45 +470,32 @@ def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novo
         for regra in regras:
             direcao = regra.get("direcao")
             tipo = regra.get("tipo_regra")
-            if direcao not in ("VERMELHO", "PRETO") or not tipo:
-                continue
+            if direcao not in ("VERMELHO", "PRETO") or not tipo: continue
             chave_vista = (tipo, direcao)
-            if chave_vista in vistos:
-                continue
+            if chave_vista in vistos: continue
             vistos.add(chave_vista)
             st = ia.estatisticas_regras_oficiais[tipo]
             st["total"] += 1
             if direcao == "VERMELHO":
-                if c0 in ("V", "B"):
-                    st["V_g0"] += 1
-                elif c1 in ("V", "B"):
-                    st["V_g1"] += 1
+                if c0 in ("V", "B"): st["V_g0"] += 1
+                elif c1 in ("V", "B"): st["V_g1"] += 1
             else:
-                if c0 in ("P", "B"):
-                    st["P_g0"] += 1
-                elif c1 in ("P", "B"):
-                    st["P_g1"] += 1
-
+                if c0 in ("P", "B"): st["P_g0"] += 1
+                elif c1 in ("P", "B"): st["P_g1"] += 1
     for i in range(max(11, inicio_novos - 2), total_dados - 2):
         janela = dados_combinados[i-11:i+1]
         sub_num = [d["numero"] for d in janela]
         sub_pol = [d["cor"] for d in janela]
         chave = ia._identificar_contexto_espelho_inversao(sub_num, sub_pol)
-        if not chave:
-            continue
+        if not chave: continue
         c0 = str(dados_combinados[i+1]["cor"]).upper()
         c1 = str(dados_combinados[i+2]["cor"]).upper()
         st = ia.especialista_espelho_inversao[chave]
         st["total"] += 1
-        if c0 in ("V", "B"):
-            st["V_g0"] += 1
-        elif c1 in ("V", "B"):
-            st["V_g1"] += 1
-        if c0 in ("P", "B"):
-            st["P_g0"] += 1
-        elif c1 in ("P", "B"):
-            st["P_g1"] += 1
-
+        if c0 in ("V", "B"): st["V_g0"] += 1
+        elif c1 in ("V", "B"): st["V_g1"] += 1
+        if c0 in ("P", "B"): st["P_g0"] += 1
+        elif c1 in ("P", "B"): st["P_g1"] += 1
     ia.regras_oficiais_metricas = {
         "ativo": True,
         "metodo": "REGRAS_OFICIAIS_AUDITADAS_ATE_G1_INCREMENTAL",
@@ -666,12 +606,9 @@ def treinar_base_longo_prazo_incremental(modelo_existente, base_existente, novos
         return None
     if not novos_dados:
         return None
-
     ia = modelo_existente
     inicio_novos = len(base_existente)
-
     ia._normalizar_unidade_analise_compatibilidade()
-
     ia.dados_longo = dados_combinados
     ia._processar_bloco_dados(novos_dados, 1, True)
     ia._calcular_probabilidades_globais_cache()
@@ -679,7 +616,6 @@ def treinar_base_longo_prazo_incremental(modelo_existente, base_existente, novos
     _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novos)
     _absorver_cartografia_completa_incremental(ia, dados_combinados, inicio_novos)
     _absorver_regras_contextuais_incremental(ia, dados_combinados, inicio_novos)
-
     ia.treinar_q_learning_contextual(
         novos_dados,
         multiplicador_peso=1,
@@ -687,11 +623,9 @@ def treinar_base_longo_prazo_incremental(modelo_existente, base_existente, novos
     )
     reforcar_aprendizado_tipo_d(ia)
     ia.mapear_padroes_avancados(novos_dados)
-
     ia._treinar_memoria_temporal_adaptativa()
     ia._atualizar_ml_controlada_incremental(dados_combinados)
     ia.atualizar_matriz_evolutiva()
-
     seen = set()
     unique_patterns = []
     for p in ia.memoria_padroes_vencedores:
@@ -703,7 +637,6 @@ def treinar_base_longo_prazo_incremental(modelo_existente, base_existente, novos
         except:
             unique_patterns.append(p)
     ia.memoria_padroes_vencedores = unique_patterns
-
     sucesso_salvar = False
     for _ in range(3):
         sucesso_salvar = salvar_modelo_longo_prazo(ia)
@@ -711,7 +644,6 @@ def treinar_base_longo_prazo_incremental(modelo_existente, base_existente, novos
             break
         sucesso_salvar = False
         time.sleep(0.6)
-
     return _montar_relatorio_incremental(
         ia, dados_combinados, stats_incrementais, sucesso_salvar
     )
@@ -727,10 +659,7 @@ def reforcar_aprendizado_tipo_d(ia):
 def treinar_base_longo_prazo_com_janelas(dados_completos):
     if not dados_completos or len(dados_completos) < 30:
         return {"sucesso": False, "mensagem": "Base muito pequena para treinamento profundo."}
-
-    # Import local para evitar circularidade
     from services.auditoria import MotorV1Completo
-
     motor = MotorV1Completo(dados_completos)
     motor.processar_auditoria()
     motor.ia.treinar_q_learning_contextual(
