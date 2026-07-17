@@ -94,11 +94,7 @@ def integrar_recencia_no_modelo(dados_recencia, multiplicador=6):
     return ia
 
 
-def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False, auditoria=True):
-    """
-    Adiciona novos dados à base longa.
-    Se auditoria=False, pula a walk-forward (mais rápido para grandes volumes).
-    """
+def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False):
     if not novos_dados:
         return {"sucesso": False, "mensagem": "Nenhum dado novo foi fornecido."}
     base_existente = []
@@ -114,10 +110,9 @@ def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False, aud
     if modelo_historico is None and len(base_existente) >= 30:
         modelo_historico = IAPreditivaV1(base_existente, [])
 
-    # ===== MODIFICAÇÃO: só executa auditoria se auditoria=True =====
+    # Auditoria walk-forward é executada normalmente
     if (
         not origem_feedback_ao_vivo
-        and auditoria
         and modelo_historico is not None
         and len(novos_dados) >= 13
     ):
