@@ -50,13 +50,13 @@ class ComportamentoMixin:
     def analisar_comportamento_pos_numero(self):
         relatorio = {}
         for num in range(15):
-            dados = self.unidade_analise[num]
-            total = dados["ocorrencias"]
+            dados = getattr(self, "unidade_analise", {}).get(num, {})
+            total = dados.get("ocorrencias", 0)
             if total == 0: continue
-            cores_pos = {"VERMELHO": dados["pos_numero_V"], "PRETO": dados["pos_numero_P"], "BRANCO": dados["pos_numero_B"]}
+            cores_pos = {"VERMELHO": dados.get("pos_numero_V", 0), "PRETO": dados.get("pos_numero_P", 0), "BRANCO": dados.get("pos_numero_B", 0)}
             cor_dominante = max(cores_pos, key=cores_pos.get)
             freq_dominante = round((cores_pos[cor_dominante] / total) * 100, 2)
-            ultimas = dados["ultimas_cores"]
+            ultimas = dados.get("ultimas_cores", [])
             if len(ultimas) >= 8:
                 ultimas_dominantes = sum(1 for c in ultimas if c == ('V' if cor_dominante == "VERMELHO" else 'P'))
                 taxa_ultimas = ultimas_dominantes / len(ultimas)
@@ -67,8 +67,7 @@ class ComportamentoMixin:
             relatorio[num] = {
                 "total_aparicoes": total, "cor_mais_frequente_apos": cor_dominante,
                 "frequencia_cor_dominante_%": freq_dominante, "distribuicao_pos": cores_pos,
-                "comportamento_dominante": dados["comportamento_dominante"], "estabilidade": dados["estabilidade"],
-                "saturacao": dados["saturacao"], "tendencia_recente": tendencia
+                "comportamento_dominante": dados.get("comportamento_dominante", "NEUTRO"), "estabilidade": dados.get("estabilidade", "NEUTRO"),
+                "saturacao": dados.get("saturacao", "NORMAL"), "tendencia_recente": tendencia
             }
         return relatorio
-
