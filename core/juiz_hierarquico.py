@@ -1,3 +1,5 @@
+from utils.helpers import hash_chave
+
 class JuizHierarquicoModificado:
     """
     MAIN 114 — Juiz da Hierarquia Oficial do MOTOR V1.
