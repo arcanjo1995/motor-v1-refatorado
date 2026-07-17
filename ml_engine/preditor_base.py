@@ -1,4 +1,6 @@
+import os
 import json
+import time
 from collections import defaultdict
 
 # Importamos todos os "pedaços do cérebro" (Mixins) que você criou
@@ -16,16 +18,18 @@ from .comportamento import ComportamentoMixin
 from .probabilidades import ProbabilidadesMixin
 
 # Utilitários e Configurações necessárias
-from config.settings import VERSAO_CHAVES_HASH
+from config.settings import VERSAO_CHAVES_HASH, HAS_ML
 from utils.helpers import (
     hash_chave, 
     _mesclar_mapa_hash, 
     fabrica_padrao_detalhado, 
     fabrica_historico_regras_zerado
 )
+from rules.analisador import AnalisadorContextoAvancado
+from rules.contagens import MotorContagensProjetivas
+from utils.math_engine import EngineMatematicoAvancado
 
 class IAPreditivaV1(
-    
     QLearningMixin, 
     MarkovMixin, 
     CartografiaMixin, 
@@ -34,8 +38,10 @@ class IAPreditivaV1(
     RiscoMixin, 
     PadroesMixin, 
     DerivaTemporalMixin, 
-    MachineLearningMixin
-, EvolucaoMixin, ComportamentoMixin, ProbabilidadesMixin
+    MachineLearningMixin,
+    EvolucaoMixin, 
+    ComportamentoMixin, 
+    ProbabilidadesMixin
 ):
     """
     O Cérebro Central do Motor V1. 
