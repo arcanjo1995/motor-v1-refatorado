@@ -24,93 +24,165 @@ st.set_page_config(
     page_title="MOTOR V1 - Deep Learning",
     page_icon="🧠",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # ============================================================
-# CSS PERSONALIZADO – LAYOUT RESPONSIVO SEM CORTES
+# CSS PERSONALIZADO - DESIGN PROFISSIONAL
 # ============================================================
 st.markdown("""
 <style>
     /* Reset de espaçamentos */
-    .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0rem !important;
-        max-width: 1200px;
+    .main .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 0.5rem;
+        max-width: 1280px;
         margin: 0 auto;
     }
-    /* Cards de status – flexíveis e sem quebra */
+    /* Header principal */
+    .app-header {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        padding: 0.8rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 1.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .app-header h1 {
+        color: white;
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+    }
+    .app-header .sub {
+        color: rgba(255,255,255,0.7);
+        font-size: 0.9rem;
+        margin: 0;
+        font-weight: 300;
+    }
+    .app-header .version {
+        color: rgba(255,255,255,0.5);
+        font-size: 0.7rem;
+        background: rgba(255,255,255,0.1);
+        padding: 0.2rem 0.8rem;
+        border-radius: 20px;
+    }
+    /* Status bar - cards horizontais */
     .status-grid {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 0.6rem;
+        margin-bottom: 1.2rem;
         justify-content: space-between;
-        margin-bottom: 0.5rem;
     }
-    .status-item {
+    .status-card {
         flex: 1 1 150px;
         background: white;
-        border-radius: 8px;
-        padding: 0.4rem 0.6rem;
+        border-radius: 10px;
+        padding: 0.6rem 0.8rem;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         text-align: center;
         border-left: 4px solid #28a745;
-        min-width: 120px;
+        transition: all 0.2s;
     }
-    .status-item .label {
-        font-size: 0.65rem;
+    .status-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .status-card .label {
+        font-size: 0.6rem;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.4px;
         color: #6c757d;
         font-weight: 600;
     }
-    .status-item .value {
+    .status-card .value {
         font-size: 1rem;
         font-weight: 700;
         color: #1a1a2e;
         margin-top: 0.1rem;
     }
-    /* Card do sinal */
-    .signal-result {
+    .status-card .icon {
+        font-size: 1.2rem;
+        margin-right: 4px;
+    }
+    /* Card de resultado do sinal */
+    .result-card {
         background: #f8f9fa;
-        border-radius: 12px;
-        padding: 1.2rem 1.5rem;
+        border-radius: 14px;
+        padding: 1.2rem 1.8rem;
         border: 1px solid #e9ecef;
-        margin: 0.5rem 0 1rem 0;
+        margin: 0.8rem 0 1.2rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
     .signal-badge {
         display: inline-block;
-        padding: 0.3rem 1.2rem;
-        border-radius: 30px;
+        padding: 0.3rem 1.4rem;
+        border-radius: 40px;
         font-weight: 700;
         font-size: 1.2rem;
+        letter-spacing: 0.3px;
     }
     .signal-vermelho { background: #dc3545; color: white; }
     .signal-preto { background: #212529; color: white; }
     .signal-no-call { background: #ffc107; color: #212529; }
     .signal-neutro { background: #6c757d; color: white; }
-    /* Expanders mais compactos */
+    /* Expanders com estilo clean */
     .streamlit-expanderHeader {
         font-weight: 600;
         font-size: 0.9rem;
         padding: 0.3rem 0.5rem;
+        border-radius: 8px;
+        background: #f8f9fa;
+    }
+    .streamlit-expanderHeader:hover {
+        background: #e9ecef;
     }
     .streamlit-expanderContent {
-        padding: 0.2rem 0.5rem 0.5rem 0.5rem;
+        padding: 0.3rem 0.5rem 0.5rem 0.5rem;
+    }
+    /* Botão primário */
+    .stButton button {
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
     /* Rodapé */
     .footer {
-        margin-top: 1.5rem;
+        margin-top: 2rem;
         padding-top: 0.8rem;
         border-top: 1px solid #e9ecef;
         text-align: center;
         font-size: 0.7rem;
         color: #6c757d;
     }
-    /* Ajuste para telas pequenas */
+    /* Sidebar mais clean */
+    .css-1d391kg {
+        padding-top: 1rem;
+        background: #f8f9fa;
+    }
+    .sidebar-header {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        padding: 0.5rem 0 0.2rem 0;
+        border-bottom: 1px solid #e9ecef;
+        margin-bottom: 0.8rem;
+    }
+    /* Responsivo */
     @media (max-width: 768px) {
-        .status-item { flex: 1 1 100px; }
+        .app-header h1 { font-size: 1.3rem; }
+        .status-card { flex: 1 1 100px; }
         .signal-badge { font-size: 1rem; padding: 0.2rem 1rem; }
+        .result-card { padding: 0.8rem 1rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -128,80 +200,97 @@ if "motor_v1" not in st.session_state:
 motor = st.session_state.motor_v1
 
 # ============================================================
-# BARRA DE STATUS – USANDO COLUNAS FIXAS PARA EVITAR CORTES
+# HEADER
+# ============================================================
+st.markdown("""
+<div class="app-header">
+    <div>
+        <h1>🧠 MOTOR V1</h1>
+        <div class="sub">Deep Learning · Q-Learning · Markov Multiescala</div>
+    </div>
+    <div class="version">v2.0</div>
+</div>
+""", unsafe_allow_html=True)
+
+# ============================================================
+# STATUS BAR – CARDS HORIZONTAIS
 # ============================================================
 try:
     status = motor.status()
 except:
     status = {}
 
-st.markdown("### 🧠 Motor V1 — Status")
-col1, col2, col3, col4, col5 = st.columns(5, gap="small")
-with col1:
-    status_text = "🟢 ATIVA" if status.get("ia_carregada") else "🔴 INATIVA"
+col_s1, col_s2, col_s3, col_s4, col_s5 = st.columns(5, gap="small")
+with col_s1:
+    ico = "🟢" if status.get("ia_carregada") else "🔴"
+    txt = "ATIVA" if status.get("ia_carregada") else "INATIVA"
+    color = "#28a745" if status.get("ia_carregada") else "#dc3545"
     st.markdown(f"""
-    <div class="status-item" style="border-left-color: {'#28a745' if status.get('ia_carregada') else '#dc3545'};">
-        <div class="label">IA Preditiva</div>
-        <div class="value">{status_text}</div>
+    <div class="status-card" style="border-left-color: {color};">
+        <div class="label"><span class="icon">{ico}</span> IA Preditiva</div>
+        <div class="value">{txt}</div>
     </div>
     """, unsafe_allow_html=True)
-with col2:
-    status_text = "✅ CARREGADA" if status.get("base_longa_carregada") else "❌ NÃO DETECTADA"
+with col_s2:
+    ico = "✅" if status.get("base_longa_carregada") else "❌"
+    txt = "CARREGADA" if status.get("base_longa_carregada") else "NÃO DETECTADA"
+    color = "#28a745" if status.get("base_longa_carregada") else "#ffc107"
     st.markdown(f"""
-    <div class="status-item" style="border-left-color: {'#28a745' if status.get('base_longa_carregada') else '#ffc107'};">
-        <div class="label">Base Longa</div>
-        <div class="value">{status_text}</div>
+    <div class="status-card" style="border-left-color: {color};">
+        <div class="label"><span class="icon">{ico}</span> Base Longa</div>
+        <div class="value">{txt}</div>
     </div>
     """, unsafe_allow_html=True)
-with col3:
-    status_text = "⚡ ATIVA" if status.get("recencia_injetada") else "⏳ AGUARDANDO"
+with col_s3:
+    ico = "⚡" if status.get("recencia_injetada") else "⏳"
+    txt = "ATIVA" if status.get("recencia_injetada") else "AGUARDANDO"
+    color = "#17a2b8" if status.get("recencia_injetada") else "#6c757d"
     st.markdown(f"""
-    <div class="status-item" style="border-left-color: {'#17a2b8' if status.get('recencia_injetada') else '#6c757d'};">
-        <div class="label">Recência (Peso 6)</div>
-        <div class="value">{status_text}</div>
+    <div class="status-card" style="border-left-color: {color};">
+        <div class="label"><span class="icon">{ico}</span> Recência (Peso 6)</div>
+        <div class="value">{txt}</div>
     </div>
     """, unsafe_allow_html=True)
-with col4:
+with col_s4:
     st.markdown(f"""
-    <div class="status-item" style="border-left-color: #6f42c1;">
-        <div class="label">Base Mestra</div>
+    <div class="status-card" style="border-left-color: #6f42c1;">
+        <div class="label">📊 Base Mestra</div>
         <div class="value">{status.get('volume_longo_prazo', 0)} Giros</div>
     </div>
     """, unsafe_allow_html=True)
-with col5:
+with col_s5:
     st.markdown(f"""
-    <div class="status-item" style="border-left-color: #fd7e14;">
-        <div class="label">Memória Imediata</div>
+    <div class="status-card" style="border-left-color: #fd7e14;">
+        <div class="label">🧠 Memória Imediata</div>
         <div class="value">{status.get('volume_recencia', 0)} Giros</div>
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown("---")
-
 # ============================================================
-# SIDEBAR – MENU DE ABAS
+# SIDEBAR – MENU DE ABAS (LIMPO)
 # ============================================================
 with st.sidebar:
-    st.markdown("## ⚙️ Navegação")
+    st.markdown("<div class='sidebar-header'>⚙️ Navegação</div>", unsafe_allow_html=True)
     aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
         "🎯 Sinal", "✅ Feedback", "📊 Auditoria", "📈 Padrões", "🧮 Cálculos"
     ])
     st.markdown("---")
     if status.get("ultima_atualizacao"):
         st.caption(f"🕒 Último sync: {status.get('ultima_atualizacao')}")
-    st.caption("v2.0 · Motor Refatorado")
+    st.caption("⚡ Motor Refatorado v2.0")
 
 # ============================================================
 # ABA 1 — SINAL REAL
 # ============================================================
 with aba_tipo_b:
-    st.header("🎯 Sinal Real — Predição Neural")
-    
-    # Entrada e métrica rápida lado a lado
+    st.header("🎯 Sinal Real")
+    st.caption("Insira a sequência de 12 números e receba a predição da rede neural híbrida.")
+
+    # Entrada e pré-análise
     col_entrada, col_metrica = st.columns([3, 1], gap="medium")
     with col_entrada:
         entrada_numeros = st.text_input(
-            "Digite os 12 últimos números (separados por vírgula):",
+            "Digite os 12 números (separados por vírgula):",
             placeholder="Ex: 2,11,14,4,9,12,12,7,3,9,5,12",
             key="input_sequencia_real",
             label_visibility="collapsed"
@@ -219,6 +308,7 @@ with aba_tipo_b:
             except:
                 pass
 
+    # Processamento do sinal
     if btn_gerar:
         if not entrada_numeros:
             st.error("Por favor, insira uma sequência válida.")
@@ -245,7 +335,7 @@ with aba_tipo_b:
                     st.markdown("---")
                     st.markdown("### 🔮 Card de Decisão")
                     
-                    # Card do resultado
+                    # Card de resultado
                     with st.container():
                         col_res1, col_res2 = st.columns([2, 1], gap="medium")
                         with col_res1:
@@ -271,7 +361,7 @@ with aba_tipo_b:
                                 reg = resultado["regime_recencia"]
                                 st.caption(f"Regime: {reg.get('modo_dominante', 'N/D')}")
 
-                    # Expansores em duas colunas equilibradas
+                    # Expansores em duas colunas
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
                     
                     with col_exp1:
