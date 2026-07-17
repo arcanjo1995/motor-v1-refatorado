@@ -172,7 +172,7 @@ aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
 ])
 
 # ============================================================
-# ABA 1 — SINAL REAL
+# ABA 1 — SINAL REAL (TODAS AS FUNCIONALIDADES RESTAURADAS)
 # ============================================================
 with aba_tipo_b:
     st.header("🎯 Sinal Real — Predição Neural")
@@ -249,18 +249,24 @@ with aba_tipo_b:
                                 reg = resultado["regime_recencia"]
                                 st.caption(f"Regime: {reg.get('modo_dominante', 'N/D')}")
 
+                    # ============================================================
+                    # EXPANSORES – TODAS AS INFORMAÇÕES RESTAURADAS
+                    # ============================================================
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
+                    
                     with col_exp1:
                         with st.expander("📊 Regime de Recência", expanded=False):
                             if resultado.get("regime_recencia"):
                                 st.json(resultado["regime_recencia"])
                             else:
                                 st.info("Nenhum regime disponível.")
+                        
                         with st.expander("🧮 Análise de Raridade", expanded=False):
                             raridade = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
                             st.write(f"**Streak:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
                             st.write(f"**Prob. continuação:** {raridade.get('probabilidade')}%")
                             st.info(f"**Status:** {raridade.get('status')}")
+                        
                         with st.expander("🔍 Auditoria de Raciocínio (Todas as Camadas)", expanded=False):
                             if resultado.get("raciocinio_trace"):
                                 for camada in resultado["raciocinio_trace"]:
@@ -270,6 +276,23 @@ with aba_tipo_b:
                                     st.markdown("---")
                             else:
                                 st.info("Nenhum trace disponível.")
+                        
+                        # ===== RESTAURADO: VALIDAÇÃO CONTEXTUAL DA AUTORIDADE =====
+                        with st.expander("📌 Validação Contextual da Autoridade", expanded=False):
+                            validacao = resultado.get("validacao_contextual_autoridade", {})
+                            if validacao:
+                                st.json(validacao)
+                            else:
+                                st.info("Nenhuma validação contextual disponível.")
+                        
+                        # ===== RESTAURADO: AUDITORIA CONTRAFACTUAL =====
+                        with st.expander("📋 Auditoria Contrafactual da Autorização", expanded=False):
+                            auditoria = resultado.get("auditoria_contrafactual_autorizacao", {})
+                            if auditoria:
+                                st.json(auditoria)
+                            else:
+                                st.info("Nenhuma auditoria contrafactual registrada.")
+                    
                     with col_exp2:
                         with st.expander("🧠 Regras e Contagens Ativas (Completas)", expanded=False):
                             try:
@@ -291,18 +314,36 @@ with aba_tipo_b:
                                     st.info("Nenhuma regra ativa.")
                             except Exception as e:
                                 st.warning(f"Erro: {e}")
+                        
+                        # ===== RESTAURADO: SIMULAÇÃO DE ROTAS (COMPLETA) =====
                         with st.expander("📈 Simulação de Rotas (Próximos Resultados)", expanded=False):
                             sim = resultado.get("simulacao_rotas_proximos_resultados", {})
                             if sim.get("ativo"):
                                 st.json(sim)
                             else:
                                 st.info("Simulação não disponível para esta janela.")
+                        
+                        # ===== RESTAURADO: CONFLUÊNCIA DE CAMADAS AMPLIADAS =====
+                        with st.expander("🧩 Confluência de Camadas Ampliadas", expanded=False):
+                            confluencia = resultado.get("confluencia_camadas_ampliadas", {})
+                            if confluencia:
+                                st.json(confluencia)
+                            else:
+                                st.info("Nenhuma confluência de camadas ampliadas disponível.")
+                        
+                        # ===== RESTAURADO: OPOSIÇÃO CAUSAL CONSOLIDADA =====
+                        with st.expander("⚖️ Oposição Causal Consolidada (Streak)", expanded=False):
+                            oposicao = resultado.get("oposicao_causal_consolidada", {})
+                            if oposicao:
+                                st.json(oposicao)
+                            else:
+                                st.info("Nenhuma oposição causal consolidada registrada.")
 
             except Exception as e:
                 st.error(f"Erro ao gerar sinal: {e}")
 
 # ============================================================
-# ABA 2 — FEEDBACK
+# ABA 2 — FEEDBACK (COMPLETA)
 # ============================================================
 with aba_feedback:
     st.header("✅ Reforço Preditivo (Q-Learning)")
@@ -351,7 +392,7 @@ with aba_feedback:
                 st.error(f"Erro: {e}")
 
 # ============================================================
-# ABA 3 — AUDITORIA
+# ABA 3 — AUDITORIA (COMPLETA)
 # ============================================================
 with aba_tipo_d:
     st.header("📊 Auditoria Dinâmica e Treinamento")
@@ -429,7 +470,7 @@ with aba_tipo_d:
                 pass
 
 # ============================================================
-# ABA 4 — PADRÕES
+# ABA 4 — PADRÕES (COMPLETA)
 # ============================================================
 with aba_padroes:
     st.header("📈 Padrões Aprendidos e Memórias")
@@ -471,7 +512,7 @@ with aba_padroes:
             st.error(f"Erro na extração: {e}")
 
 # ============================================================
-# ABA 5 — CÁLCULOS
+# ABA 5 — CÁLCULOS (COMPLETA)
 # ============================================================
 with aba_matematica:
     st.header("🧮 Engine Estatístico Avançado")
