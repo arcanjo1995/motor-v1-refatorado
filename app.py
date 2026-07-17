@@ -28,91 +28,46 @@ st.set_page_config(
 )
 
 # ============================================================
-# CSS - LAYOUT TELA CHEIA, SEM SIDEBAR
+# CSS – TELA CHEIA, SEM CORTES
 # ============================================================
 st.markdown("""
 <style>
-    /* Remove sidebar completamente */
-    section[data-testid="stSidebar"] {
-        display: none !important;
-    }
-    section[data-testid="stSidebar"][aria-expanded="true"] {
-        display: none !important;
-    }
+    section[data-testid="stSidebar"] { display: none !important; }
     .main .block-container {
-        padding-top: 1rem;
+        padding-top: 0.8rem;
         padding-bottom: 0.5rem;
         max-width: 1400px;
         margin: 0 auto;
         padding-left: 1rem;
         padding-right: 1rem;
     }
-    /* Header */
     .app-header {
         background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        padding: 0.6rem 1.5rem;
+        padding: 0.5rem 1.5rem;
         border-radius: 10px;
-        margin-bottom: 1.2rem;
+        margin-bottom: 1rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
     }
-    .app-header h1 {
-        color: white;
-        margin: 0;
-        font-size: 1.6rem;
-        font-weight: 600;
-    }
-    .app-header .sub {
-        color: rgba(255,255,255,0.7);
-        font-size: 0.85rem;
-    }
-    .app-header .version {
-        color: rgba(255,255,255,0.5);
-        font-size: 0.7rem;
-        background: rgba(255,255,255,0.1);
-        padding: 0.2rem 0.8rem;
-        border-radius: 20px;
-    }
-    /* Status bar - horizontal compacta */
+    .app-header h1 { color: white; margin: 0; font-size: 1.5rem; font-weight: 600; }
+    .app-header .sub { color: rgba(255,255,255,0.7); font-size: 0.8rem; }
+    .app-header .version { color: rgba(255,255,255,0.5); font-size: 0.7rem; background: rgba(255,255,255,0.1); padding: 0.2rem 0.8rem; border-radius: 20px; }
     .status-grid {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.4rem;
-        margin-bottom: 1rem;
+        gap: 0.3rem;
+        margin-bottom: 0.8rem;
         background: #f8f9fa;
-        border-radius: 10px;
-        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        padding: 0.3rem 0.6rem;
         border: 1px solid #e9ecef;
     }
-    .status-item {
-        flex: 1 1 130px;
-        text-align: center;
-        padding: 0.2rem 0.3rem;
-    }
-    .status-item .label {
-        font-size: 0.6rem;
-        text-transform: uppercase;
-        color: #6c757d;
-        font-weight: 600;
-        letter-spacing: 0.3px;
-    }
-    .status-item .value {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: #1a1a2e;
-    }
-    .status-item .value .online { color: #28a745; }
-    .status-item .value .offline { color: #dc3545; }
-    /* Card de resultado */
-    .result-card {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 1rem 1.5rem;
-        border: 1px solid #e9ecef;
-        margin: 0.5rem 0 1rem 0;
-    }
+    .status-item { flex: 1 1 120px; text-align: center; padding: 0.1rem 0.2rem; }
+    .status-item .label { font-size: 0.55rem; text-transform: uppercase; color: #6c757d; font-weight: 600; }
+    .status-item .value { font-size: 0.85rem; font-weight: 700; color: #1a1a2e; }
+    .status-item .online { color: #28a745; }
     .signal-badge {
         display: inline-block;
         padding: 0.3rem 1.4rem;
@@ -124,57 +79,20 @@ st.markdown("""
     .signal-preto { background: #212529; color: white; }
     .signal-no-call { background: #ffc107; color: #212529; }
     .signal-neutro { background: #6c757d; color: white; }
-    /* Expanders mais compactos */
-    .streamlit-expanderHeader {
-        font-weight: 600;
-        font-size: 0.85rem;
-        padding: 0.2rem 0.5rem;
-        border-radius: 6px;
-        background: #f8f9fa;
-    }
-    .streamlit-expanderContent {
-        padding: 0.2rem 0.5rem 0.5rem 0.5rem;
-    }
-    /* Tabs personalizadas - removendo underline padrão */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 0.2rem;
-        background: #f1f3f5;
-        border-radius: 10px;
-        padding: 0.3rem 0.5rem;
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 0.3rem 1rem;
-        font-weight: 500;
-        background: transparent;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: white;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-    .stButton button {
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.2s;
-    }
-    .stButton button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .footer {
-        margin-top: 1.5rem;
-        padding-top: 0.6rem;
-        border-top: 1px solid #e9ecef;
-        text-align: center;
-        font-size: 0.7rem;
-        color: #6c757d;
-    }
+    .streamlit-expanderHeader { font-weight: 600; font-size: 0.9rem; padding: 0.2rem 0.5rem; border-radius: 6px; background: #f8f9fa; }
+    .streamlit-expanderContent { padding: 0.3rem 0.5rem 0.5rem 0.5rem; }
+    .stTabs [data-baseweb="tab-list"] { gap: 0.2rem; background: #f1f3f5; border-radius: 10px; padding: 0.2rem 0.5rem; }
+    .stTabs [data-baseweb="tab"] { border-radius: 8px; padding: 0.2rem 1rem; font-weight: 500; background: transparent; }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] { background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .stButton button { border-radius: 8px; font-weight: 600; transition: all 0.2s; }
+    .stButton button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .footer { margin-top: 1.5rem; padding-top: 0.6rem; border-top: 1px solid #e9ecef; text-align: center; font-size: 0.7rem; color: #6c757d; }
+    .json-container { background: #f8f9fa; padding: 0.5rem; border-radius: 6px; border: 1px solid #e9ecef; }
     @media (max-width: 768px) {
-        .app-header h1 { font-size: 1.2rem; }
-        .status-item { flex: 1 1 80px; }
-        .status-item .value { font-size: 0.75rem; }
-        .signal-badge { font-size: 1rem; padding: 0.2rem 1rem; }
-        .result-card { padding: 0.6rem 0.8rem; }
+        .app-header h1 { font-size: 1.1rem; }
+        .status-item { flex: 1 1 70px; }
+        .status-item .value { font-size: 0.7rem; }
+        .signal-badge { font-size: 0.9rem; padding: 0.2rem 0.8rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -184,7 +102,7 @@ st.markdown("""
 # ============================================================
 if "motor_v1" not in st.session_state:
     st.session_state.motor_v1 = motor_unificado
-    with st.spinner("🧠 Inicializando MLP, Gradient Boosting, Markov..."):
+    with st.spinner("🧠 Inicializando..."):
         try:
             st.session_state.motor_v1.carregar_tudo()
         except Exception as e:
@@ -205,7 +123,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# STATUS BAR – HORIZONTAL COMPACTA
+# STATUS BAR
 # ============================================================
 try:
     status = motor.status()
@@ -215,23 +133,23 @@ except:
 st.markdown("""
 <div class="status-grid">
     <div class="status-item">
-        <div class="label">🤖 IA Preditiva</div>
-        <div class="value"><span class="online">🟢 ATIVA</span></div>
+        <div class="label">🤖 IA</div>
+        <div class="value"><span class="online">ATIVA</span></div>
     </div>
     <div class="status-item">
         <div class="label">📊 Base Longa</div>
-        <div class="value"><span class="online">✅ CARREGADA</span></div>
+        <div class="value"><span class="online">CARREGADA</span></div>
     </div>
     <div class="status-item">
-        <div class="label">⚡ Recência (Peso 6)</div>
-        <div class="value"><span class="online">✅ ATIVA</span></div>
+        <div class="label">⚡ Recência</div>
+        <div class="value"><span class="online">ATIVA</span></div>
     </div>
     <div class="status-item">
-        <div class="label">📈 Base Mestra</div>
+        <div class="label">📈 Mestra</div>
         <div class="value">{}</div>
     </div>
     <div class="status-item">
-        <div class="label">🧠 Memória Imediata</div>
+        <div class="label">🧠 Imediata</div>
         <div class="value">{}</div>
     </div>
 </div>
@@ -241,7 +159,7 @@ st.markdown("""
 ), unsafe_allow_html=True)
 
 # ============================================================
-# ABAS – TABS HORIZONTAIS NO CORPO PRINCIPAL
+# ABAS
 # ============================================================
 aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
     "🎯 Sinal Real",
@@ -252,13 +170,12 @@ aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
 ])
 
 # ============================================================
-# ABA 1 — SINAL REAL
+# ABA 1 — SINAL REAL (TODAS AS INFORMAÇÕES COMPLETAS)
 # ============================================================
 with aba_tipo_b:
     st.header("🎯 Sinal Real — Predição Neural")
     st.caption("Insira a sequência de 12 números e receba a predição da rede neural híbrida.")
 
-    # Entrada e pré-análise lado a lado
     col_entrada, col_metrica = st.columns([3, 1], gap="medium")
     with col_entrada:
         entrada_numeros = st.text_input(
@@ -330,46 +247,57 @@ with aba_tipo_b:
                                 reg = resultado["regime_recencia"]
                                 st.caption(f"Regime: {reg.get('modo_dominante', 'N/D')}")
 
-                    # Expansores em duas colunas
+                    # ============================================================
+                    # EXPANSORES COM INFORMAÇÕES COMPLETAS (SEM CORTES)
+                    # ============================================================
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
+                    
                     with col_exp1:
                         with st.expander("📊 Regime de Recência", expanded=False):
                             if resultado.get("regime_recencia"):
                                 st.json(resultado["regime_recencia"])
                             else:
                                 st.info("Nenhum regime disponível.")
+                        
                         with st.expander("🧮 Análise de Raridade", expanded=False):
                             raridade = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
                             st.write(f"**Streak:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
                             st.write(f"**Prob. continuação:** {raridade.get('probabilidade')}%")
                             st.info(f"**Status:** {raridade.get('status')}")
-                        with st.expander("🔍 Auditoria de Raciocínio (Camadas)", expanded=False):
+                        
+                        with st.expander("🔍 Auditoria de Raciocínio (Todas as Camadas)", expanded=False):
                             if resultado.get("raciocinio_trace"):
-                                for camada in resultado["raciocinio_trace"][-4:]:
+                                for camada in resultado["raciocinio_trace"]:
                                     st.markdown(f"**Camada {camada.get('camada')} — {camada.get('nome')}**")
-                                    st.write(f"*{camada.get('resultado')}*")
-                                    st.caption(camada.get('detalhe', '')[:250] + "..." if len(camada.get('detalhe', '')) > 250 else camada.get('detalhe', ''))
+                                    st.write(f"*Resultado:* `{camada.get('resultado')}`")
+                                    st.write(f"*Detalhe:* {camada.get('detalhe')}")
                                     st.markdown("---")
                             else:
                                 st.info("Nenhum trace disponível.")
+                    
                     with col_exp2:
-                        with st.expander("🧠 Regras e Contagens Ativas", expanded=False):
+                        with st.expander("🧠 Regras e Contagens Ativas (Completas)", expanded=False):
                             try:
                                 regras = MotorContagensProjetivas.mapear_janela(
                                     lista_numeros, polaridades, None, getattr(motor, "ia", None)
                                 )
                                 if regras:
-                                    for r in regras[:5]:
+                                    for r in regras:  # SEM LIMITE
                                         direcao = r.get("direcao", "NEUTRO")
                                         emoji = "🔴" if direcao == "VERMELHO" else ("⚫" if direcao == "PRETO" else "⚪")
-                                        st.write(f"{emoji} **{r.get('tipo_regra')}** — *{r.get('familia')}*")
-                                    if len(regras) > 5:
-                                        st.caption(f"... e mais {len(regras)-5} regras")
+                                        st.markdown(f"{emoji} **{r.get('tipo_regra')}**")
+                                        st.write(f"• Família: `{r.get('familia')}` | Origem: `{r.get('origem')}`")
+                                        st.write(f"• Direção: **{direcao}** | Peso: **{r.get('peso')}**")
+                                        detalhes = {k: v for k, v in r.items() if k not in ("direcao", "tipo_regra", "origem", "peso", "familia")}
+                                        if detalhes:
+                                            st.json(detalhes)
+                                        st.markdown("---")
                                 else:
                                     st.info("Nenhuma regra ativa.")
                             except Exception as e:
                                 st.warning(f"Erro: {e}")
-                        with st.expander("📈 Simulação de Rotas", expanded=False):
+                        
+                        with st.expander("📈 Simulação de Rotas (Próximos Resultados)", expanded=False):
                             sim = resultado.get("simulacao_rotas_proximos_resultados", {})
                             if sim.get("ativo"):
                                 st.json(sim)
@@ -380,7 +308,7 @@ with aba_tipo_b:
                 st.error(f"Erro ao gerar sinal: {e}")
 
 # ============================================================
-# ABA 2 — FEEDBACK
+# ABA 2 — FEEDBACK (COMPLETA)
 # ============================================================
 with aba_feedback:
     st.header("✅ Reforço Preditivo (Q-Learning)")
@@ -429,7 +357,7 @@ with aba_feedback:
                 st.error(f"Erro: {e}")
 
 # ============================================================
-# ABA 3 — AUDITORIA
+# ABA 3 — AUDITORIA (COMPLETA)
 # ============================================================
 with aba_tipo_d:
     st.header("📊 Auditoria Dinâmica e Treinamento")
@@ -507,7 +435,7 @@ with aba_tipo_d:
                 pass
 
 # ============================================================
-# ABA 4 — PADRÕES
+# ABA 4 — PADRÕES (COMPLETA)
 # ============================================================
 with aba_padroes:
     st.header("📈 Padrões Aprendidos e Memórias")
@@ -530,21 +458,26 @@ with aba_padroes:
                 
                 with st.expander("📐 Competência das Regras", expanded=False):
                     if hasattr(ia, 'regras_competencia_cronologica') and ia.regras_competencia_cronologica:
-                        for regra, stats in list(ia.regras_competencia_cronologica.items())[:20]:
+                        for regra, stats in ia.regras_competencia_cronologica.items():
                             st.write(f"**{regra}:** {stats.get('taxa_g0_g1', 0):.2f}% (n={stats.get('total_validacao', 0)})")
                     else:
                         st.info("Nenhuma competência registrada.")
                 
-                with st.expander("🔢 Comportamento Pós-Número", expanded=False):
+                with st.expander("🔢 Comportamento Pós-Número (Completo)", expanded=False):
                     if hasattr(ia, 'analisar_comportamento_pos_numero'):
                         rel = ia.analisar_comportamento_pos_numero()
-                        for num, dados in list(rel.items())[:10]:
-                            st.write(f"**Número {num}:** {dados.get('cor_mais_frequente_apos')} ({dados.get('frequencia_cor_dominante_%')}%)")
+                        for num, dados in rel.items():
+                            st.markdown(f"**Número {num}**")
+                            st.write(f"• Total: {dados.get('total_aparicoes')}")
+                            st.write(f"• Cor predominante: {dados.get('cor_mais_frequente_apos')} ({dados.get('frequencia_cor_dominante_%')}%)")
+                            st.write(f"• Estabilidade: {dados.get('estabilidade')} | Saturação: {dados.get('saturacao')}")
+                            st.write(f"• Tendência recente: {dados.get('tendencia_recente')}")
+                            st.markdown("---")
         except Exception as e:
             st.error(f"Erro na extração: {e}")
 
 # ============================================================
-# ABA 5 — CÁLCULOS
+# ABA 5 — CÁLCULOS (COMPLETA)
 # ============================================================
 with aba_matematica:
     st.header("🧮 Engine Estatístico Avançado")
