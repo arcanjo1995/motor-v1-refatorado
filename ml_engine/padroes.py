@@ -1,4 +1,3 @@
-# ml_engine/padroes.py
 import math
 from collections import defaultdict
 from rules.analisador import AnalisadorContextoAvancado
