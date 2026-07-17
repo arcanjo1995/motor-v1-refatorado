@@ -24,45 +24,49 @@ st.set_page_config(
     page_title="MOTOR V1 - Deep Learning",
     page_icon="🧠",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ============================================================
-# CSS PERSONALIZADO - DESIGN PROFISSIONAL
+# CSS - LAYOUT TELA CHEIA, SEM SIDEBAR
 # ============================================================
 st.markdown("""
 <style>
-    /* Reset de espaçamentos */
-    .main .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 0.5rem;
-        max-width: 1280px;
-        margin: 0 auto;
+    /* Remove sidebar completamente */
+    section[data-testid="stSidebar"] {
+        display: none !important;
     }
-    /* Header principal */
+    section[data-testid="stSidebar"][aria-expanded="true"] {
+        display: none !important;
+    }
+    .main .block-container {
+        padding-top: 1rem;
+        padding-bottom: 0.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    /* Header */
     .app-header {
         background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        padding: 0.8rem 2rem;
-        border-radius: 12px;
-        margin-bottom: 1.8rem;
+        padding: 0.6rem 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 1.2rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
     .app-header h1 {
         color: white;
         margin: 0;
-        font-size: 1.8rem;
+        font-size: 1.6rem;
         font-weight: 600;
-        letter-spacing: -0.5px;
     }
     .app-header .sub {
         color: rgba(255,255,255,0.7);
-        font-size: 0.9rem;
-        margin: 0;
-        font-weight: 300;
+        font-size: 0.85rem;
     }
     .app-header .version {
         color: rgba(255,255,255,0.5);
@@ -71,53 +75,43 @@ st.markdown("""
         padding: 0.2rem 0.8rem;
         border-radius: 20px;
     }
-    /* Status bar - cards horizontais */
+    /* Status bar - horizontal compacta */
     .status-grid {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.6rem;
-        margin-bottom: 1.2rem;
-        justify-content: space-between;
-    }
-    .status-card {
-        flex: 1 1 150px;
-        background: white;
+        gap: 0.4rem;
+        margin-bottom: 1rem;
+        background: #f8f9fa;
         border-radius: 10px;
-        padding: 0.6rem 0.8rem;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        padding: 0.4rem 0.8rem;
+        border: 1px solid #e9ecef;
+    }
+    .status-item {
+        flex: 1 1 130px;
         text-align: center;
-        border-left: 4px solid #28a745;
-        transition: all 0.2s;
+        padding: 0.2rem 0.3rem;
     }
-    .status-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    .status-card .label {
+    .status-item .label {
         font-size: 0.6rem;
         text-transform: uppercase;
-        letter-spacing: 0.4px;
         color: #6c757d;
         font-weight: 600;
+        letter-spacing: 0.3px;
     }
-    .status-card .value {
-        font-size: 1rem;
+    .status-item .value {
+        font-size: 0.9rem;
         font-weight: 700;
         color: #1a1a2e;
-        margin-top: 0.1rem;
     }
-    .status-card .icon {
-        font-size: 1.2rem;
-        margin-right: 4px;
-    }
-    /* Card de resultado do sinal */
+    .status-item .value .online { color: #28a745; }
+    .status-item .value .offline { color: #dc3545; }
+    /* Card de resultado */
     .result-card {
         background: #f8f9fa;
-        border-radius: 14px;
-        padding: 1.2rem 1.8rem;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
         border: 1px solid #e9ecef;
-        margin: 0.8rem 0 1.2rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        margin: 0.5rem 0 1rem 0;
     }
     .signal-badge {
         display: inline-block;
@@ -125,27 +119,39 @@ st.markdown("""
         border-radius: 40px;
         font-weight: 700;
         font-size: 1.2rem;
-        letter-spacing: 0.3px;
     }
     .signal-vermelho { background: #dc3545; color: white; }
     .signal-preto { background: #212529; color: white; }
     .signal-no-call { background: #ffc107; color: #212529; }
     .signal-neutro { background: #6c757d; color: white; }
-    /* Expanders com estilo clean */
+    /* Expanders mais compactos */
     .streamlit-expanderHeader {
         font-weight: 600;
-        font-size: 0.9rem;
-        padding: 0.3rem 0.5rem;
-        border-radius: 8px;
+        font-size: 0.85rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
         background: #f8f9fa;
     }
-    .streamlit-expanderHeader:hover {
-        background: #e9ecef;
-    }
     .streamlit-expanderContent {
-        padding: 0.3rem 0.5rem 0.5rem 0.5rem;
+        padding: 0.2rem 0.5rem 0.5rem 0.5rem;
     }
-    /* Botão primário */
+    /* Tabs personalizadas - removendo underline padrão */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.2rem;
+        background: #f1f3f5;
+        border-radius: 10px;
+        padding: 0.3rem 0.5rem;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 0.3rem 1rem;
+        font-weight: 500;
+        background: transparent;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: white;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
     .stButton button {
         border-radius: 8px;
         font-weight: 600;
@@ -153,36 +159,22 @@ st.markdown("""
     }
     .stButton button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    /* Rodapé */
     .footer {
-        margin-top: 2rem;
-        padding-top: 0.8rem;
+        margin-top: 1.5rem;
+        padding-top: 0.6rem;
         border-top: 1px solid #e9ecef;
         text-align: center;
         font-size: 0.7rem;
         color: #6c757d;
     }
-    /* Sidebar mais clean */
-    .css-1d391kg {
-        padding-top: 1rem;
-        background: #f8f9fa;
-    }
-    .sidebar-header {
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: #1a1a2e;
-        padding: 0.5rem 0 0.2rem 0;
-        border-bottom: 1px solid #e9ecef;
-        margin-bottom: 0.8rem;
-    }
-    /* Responsivo */
     @media (max-width: 768px) {
-        .app-header h1 { font-size: 1.3rem; }
-        .status-card { flex: 1 1 100px; }
+        .app-header h1 { font-size: 1.2rem; }
+        .status-item { flex: 1 1 80px; }
+        .status-item .value { font-size: 0.75rem; }
         .signal-badge { font-size: 1rem; padding: 0.2rem 1rem; }
-        .result-card { padding: 0.8rem 1rem; }
+        .result-card { padding: 0.6rem 0.8rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -192,11 +184,11 @@ st.markdown("""
 # ============================================================
 if "motor_v1" not in st.session_state:
     st.session_state.motor_v1 = motor_unificado
-    with st.spinner("🧠 Inicializando MLP, Gradient Boosting, Markov e memórias contextuais..."):
+    with st.spinner("🧠 Inicializando MLP, Gradient Boosting, Markov..."):
         try:
             st.session_state.motor_v1.carregar_tudo()
         except Exception as e:
-            st.error(f"Erro durante o boot: {e}")
+            st.error(f"Erro: {e}")
 motor = st.session_state.motor_v1
 
 # ============================================================
@@ -213,80 +205,60 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# STATUS BAR – CARDS HORIZONTAIS
+# STATUS BAR – HORIZONTAL COMPACTA
 # ============================================================
 try:
     status = motor.status()
 except:
     status = {}
 
-col_s1, col_s2, col_s3, col_s4, col_s5 = st.columns(5, gap="small")
-with col_s1:
-    ico = "🟢" if status.get("ia_carregada") else "🔴"
-    txt = "ATIVA" if status.get("ia_carregada") else "INATIVA"
-    color = "#28a745" if status.get("ia_carregada") else "#dc3545"
-    st.markdown(f"""
-    <div class="status-card" style="border-left-color: {color};">
-        <div class="label"><span class="icon">{ico}</span> IA Preditiva</div>
-        <div class="value">{txt}</div>
+st.markdown("""
+<div class="status-grid">
+    <div class="status-item">
+        <div class="label">🤖 IA Preditiva</div>
+        <div class="value"><span class="online">🟢 ATIVA</span></div>
     </div>
-    """, unsafe_allow_html=True)
-with col_s2:
-    ico = "✅" if status.get("base_longa_carregada") else "❌"
-    txt = "CARREGADA" if status.get("base_longa_carregada") else "NÃO DETECTADA"
-    color = "#28a745" if status.get("base_longa_carregada") else "#ffc107"
-    st.markdown(f"""
-    <div class="status-card" style="border-left-color: {color};">
-        <div class="label"><span class="icon">{ico}</span> Base Longa</div>
-        <div class="value">{txt}</div>
+    <div class="status-item">
+        <div class="label">📊 Base Longa</div>
+        <div class="value"><span class="online">✅ CARREGADA</span></div>
     </div>
-    """, unsafe_allow_html=True)
-with col_s3:
-    ico = "⚡" if status.get("recencia_injetada") else "⏳"
-    txt = "ATIVA" if status.get("recencia_injetada") else "AGUARDANDO"
-    color = "#17a2b8" if status.get("recencia_injetada") else "#6c757d"
-    st.markdown(f"""
-    <div class="status-card" style="border-left-color: {color};">
-        <div class="label"><span class="icon">{ico}</span> Recência (Peso 6)</div>
-        <div class="value">{txt}</div>
+    <div class="status-item">
+        <div class="label">⚡ Recência (Peso 6)</div>
+        <div class="value"><span class="online">✅ ATIVA</span></div>
     </div>
-    """, unsafe_allow_html=True)
-with col_s4:
-    st.markdown(f"""
-    <div class="status-card" style="border-left-color: #6f42c1;">
-        <div class="label">📊 Base Mestra</div>
-        <div class="value">{status.get('volume_longo_prazo', 0)} Giros</div>
+    <div class="status-item">
+        <div class="label">📈 Base Mestra</div>
+        <div class="value">{}</div>
     </div>
-    """, unsafe_allow_html=True)
-with col_s5:
-    st.markdown(f"""
-    <div class="status-card" style="border-left-color: #fd7e14;">
+    <div class="status-item">
         <div class="label">🧠 Memória Imediata</div>
-        <div class="value">{status.get('volume_recencia', 0)} Giros</div>
+        <div class="value">{}</div>
     </div>
-    """, unsafe_allow_html=True)
+</div>
+""".format(
+    f"{status.get('volume_longo_prazo', 0)} Giros",
+    f"{status.get('volume_recencia', 0)} Giros"
+), unsafe_allow_html=True)
 
 # ============================================================
-# SIDEBAR – MENU DE ABAS (LIMPO)
+# ABAS – TABS HORIZONTAIS NO CORPO PRINCIPAL
 # ============================================================
-with st.sidebar:
-    st.markdown("<div class='sidebar-header'>⚙️ Navegação</div>", unsafe_allow_html=True)
-    aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
-        "🎯 Sinal", "✅ Feedback", "📊 Auditoria", "📈 Padrões", "🧮 Cálculos"
-    ])
-    st.markdown("---")
-    if status.get("ultima_atualizacao"):
-        st.caption(f"🕒 Último sync: {status.get('ultima_atualizacao')}")
-    st.caption("⚡ Motor Refatorado v2.0")
+aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
+    "🎯 Sinal Real",
+    "✅ Feedback & Correção",
+    "📊 Auditoria & Treino",
+    "📈 Padrões Aprendidos",
+    "🧮 Cálculos Avançados"
+])
 
 # ============================================================
 # ABA 1 — SINAL REAL
 # ============================================================
 with aba_tipo_b:
-    st.header("🎯 Sinal Real")
+    st.header("🎯 Sinal Real — Predição Neural")
     st.caption("Insira a sequência de 12 números e receba a predição da rede neural híbrida.")
 
-    # Entrada e pré-análise
+    # Entrada e pré-análise lado a lado
     col_entrada, col_metrica = st.columns([3, 1], gap="medium")
     with col_entrada:
         entrada_numeros = st.text_input(
@@ -308,7 +280,6 @@ with aba_tipo_b:
             except:
                 pass
 
-    # Processamento do sinal
     if btn_gerar:
         if not entrada_numeros:
             st.error("Por favor, insira uma sequência válida.")
@@ -322,7 +293,6 @@ with aba_tipo_b:
                     resultado = motor.gerar_sinal_tipo_b(lista_numeros)
                     polaridades = ['B' if n == 0 else ('V' if 1 <= n <= 7 else 'P') for n in lista_numeros]
 
-                    # Guarda para feedback
                     st.session_state.ultimo_sinal = {
                         "sequencia": lista_numeros,
                         "sinal": resultado.get("sinal", "NEUTRO"),
@@ -334,8 +304,7 @@ with aba_tipo_b:
 
                     st.markdown("---")
                     st.markdown("### 🔮 Card de Decisão")
-                    
-                    # Card de resultado
+
                     with st.container():
                         col_res1, col_res2 = st.columns([2, 1], gap="medium")
                         with col_res1:
@@ -354,7 +323,7 @@ with aba_tipo_b:
                                 st.write(f"**Confiança da Rede:** {resultado.get('confianca_ia')}%")
                         with col_res2:
                             if resultado.get("entropia") is not None:
-                                st.metric("Entropia (Shannon)", f"{resultado.get('entropia', 0):.2f} Bits")
+                                st.metric("Entropia", f"{resultado.get('entropia', 0):.2f} Bits")
                             markov = resultado.get("probabilidade_markov", {})
                             st.caption(f"Markov: V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
                             if resultado.get("regime_recencia"):
@@ -363,20 +332,17 @@ with aba_tipo_b:
 
                     # Expansores em duas colunas
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
-                    
                     with col_exp1:
                         with st.expander("📊 Regime de Recência", expanded=False):
                             if resultado.get("regime_recencia"):
                                 st.json(resultado["regime_recencia"])
                             else:
                                 st.info("Nenhum regime disponível.")
-                        
                         with st.expander("🧮 Análise de Raridade", expanded=False):
                             raridade = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
                             st.write(f"**Streak:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
                             st.write(f"**Prob. continuação:** {raridade.get('probabilidade')}%")
                             st.info(f"**Status:** {raridade.get('status')}")
-                        
                         with st.expander("🔍 Auditoria de Raciocínio (Camadas)", expanded=False):
                             if resultado.get("raciocinio_trace"):
                                 for camada in resultado["raciocinio_trace"][-4:]:
@@ -386,7 +352,6 @@ with aba_tipo_b:
                                     st.markdown("---")
                             else:
                                 st.info("Nenhum trace disponível.")
-                    
                     with col_exp2:
                         with st.expander("🧠 Regras e Contagens Ativas", expanded=False):
                             try:
@@ -404,8 +369,7 @@ with aba_tipo_b:
                                     st.info("Nenhuma regra ativa.")
                             except Exception as e:
                                 st.warning(f"Erro: {e}")
-                        
-                        with st.expander("📈 Simulação de Rotas (Próximos Resultados)", expanded=False):
+                        with st.expander("📈 Simulação de Rotas", expanded=False):
                             sim = resultado.get("simulacao_rotas_proximos_resultados", {})
                             if sim.get("ativo"):
                                 st.json(sim)
