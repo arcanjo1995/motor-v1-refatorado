@@ -1,5 +1,8 @@
+# ml_engine/padroes.py
 import math
 from collections import defaultdict
+from rules.analisador import AnalisadorContextoAvancado
+from rules.contagens import MotorContagensProjetivas
 
 class PadroesMixin:
     """
@@ -145,8 +148,6 @@ class PadroesMixin:
                 if len(self.unidade_analise[num]["ultimas_cores"]) > 10:
                     self.unidade_analise[num]["ultimas_cores"].pop(0)
                     
-        # MAIN 97 — aprende quais NÚMEROS costumam sair imediatamente após
-        # cada número. O peso temporal/recência é o mesmo já usado pelo bloco.
         for i in range(total_dados - 1):
             numero_atual = int(dados[i]['numero'])
             proximo_numero = int(dados[i + 1]['numero'])
@@ -273,6 +274,7 @@ class PadroesMixin:
                 if abs(padrao.get("entropia_shannon", 0.0) - entropia_atual) <= 0.2: match += 5
             if match >= 12: bonus += 4
         return min(bonus, 22)
+
     def _calcular_z_score(self, sucessos, tentativas, probabilidade_esperada=0.4667):
         if tentativas == 0: return 0.0
         proporcao_real = sucessos / tentativas
@@ -313,18 +315,6 @@ class PadroesMixin:
         return False, "NEUTRO", ""
 
     def simular_rotas_proximos_resultados(self, sub_num, sub_pol, limite_rotas=6):
-        """
-        MAIN 97 — simulação causal ponderada de possíveis próximos resultados.
-
-        Exemplo conceitual: janela termina em 9-5. O motor estima quais números
-        historicamente aparecem após o 5 e após o bigrama 9-5. Para cada número
-        candidato Y, reconstrói a rota como se Y ocupasse G0 e consulta: cor de Y,
-        novo bigrama 5-Y, novo trigrama 9-5-Y, comportamento do número Y, Markov
-        após a cor de Y e regras projetivas que ficariam ativas na janela deslocada.
-
-        A simulação não sorteia resultados e não altera memórias. É uma soma
-        determinística de rotas históricas, ponderada pela probabilidade do número Y.
-        """
         if len(sub_num) < 3 or len(sub_pol) < 3:
             return {"ativo": False, "direcao": "NEUTRO", "peso": 0.0, "rotas": []}
 
@@ -355,10 +345,6 @@ class PadroesMixin:
                 "motivo": "SEM_DISTRIBUICAO_NUMERICA"
             }
 
-        # MAIN 120 — conecta a deriva temporal já mapeada à massa inicial das
-        # rotas Y. A distribuição macro de transição/bigrama continua sendo a
-        # origem dos candidatos; a recência apenas recalibra, de forma limitada,
-        # a massa das cores quando há mudança comportamental comprovada.
         deriva_rota_y = {
             "aplicada": False,
             "numero_referencia": ultimo,
@@ -414,8 +400,6 @@ class PadroesMixin:
                     taxa_v_recente /= soma_pesos
                     taxa_p_recente /= soma_pesos
 
-                    # Razão recente/macro limitada para impedir que a recência
-                    # transforme a simulação de rotas em uma camada soberana.
                     mult_v = taxa_v_recente / max(macro_v, 0.01)
                     mult_p = taxa_p_recente / max(macro_p, 0.01)
                     mult_v = max(0.65, min(1.35, mult_v))
@@ -438,8 +422,6 @@ class PadroesMixin:
                         "multiplicador_preto": round(mult_p, 6)
                     })
         except Exception:
-            # A simulação causal original permanece operacional caso a matriz
-            # de deriva ainda não esteja disponível em um modelo legado.
             deriva_rota_y["estado"] = "FALLBACK_MACRO"
 
         total_massa = sum(candidatos.values())
@@ -471,7 +453,6 @@ class PadroesMixin:
             score_p = 0.0
             evidencias = []
 
-            # G0 possível: a própria cor do número candidato tem prioridade.
             if cor_y == "V":
                 score_v += 1.50
             elif cor_y == "P":
@@ -481,7 +462,6 @@ class PadroesMixin:
                 score_p += 0.75
             evidencias.append(f"G0_NUMERO_{numero_y}_{cor_y}")
 
-            # Consequência do novo trigrama: ...-penúltimo-último-Y.
             chave_tri = f"{penultimo}-{ultimo}-{numero_y}"
             st_tri = getattr(self, "estatisticas_trigramas_globais", {}).get(chave_tri)
             if st_tri and int(st_tri.get("total", 0)) >= 5:
@@ -492,7 +472,6 @@ class PadroesMixin:
                 score_p += tp * 0.90
                 evidencias.append(f"TRI_{chave_tri}_V{tv:.3f}_P{tp:.3f}")
 
-            # Consequência do novo bigrama último-Y.
             chave_bi = f"{ultimo}-{numero_y}"
             st_bi = getattr(self, "estatisticas_bigramas_globais", {}).get(chave_bi)
             if st_bi and int(st_bi.get("total", 0)) >= 5:
@@ -503,7 +482,6 @@ class PadroesMixin:
                 score_p += tp * 0.75
                 evidencias.append(f"BI_{chave_bi}_V{tv:.3f}_P{tp:.3f}")
 
-            # Número Y pode mudar a rota da casa seguinte.
             st_num = self.unidade_analise.get(numero_y, {})
             ocorrencias = float(st_num.get("ocorrencias", 0.0))
             if ocorrencias >= 5:
@@ -513,7 +491,6 @@ class PadroesMixin:
                 score_p += tp * 0.65
                 evidencias.append(f"NUM_{numero_y}_V{tv:.3f}_P{tp:.3f}")
 
-            # Markov recalculado após a cor hipotética de Y.
             pol_simulada = (list(sub_pol) + [cor_y])[-12:]
             markov_sim = self.calcular_probabilidade_exata_markov(pol_simulada)
             score_v += (float(markov_sim.get("V", 0.0)) / 100.0) * 0.55
@@ -522,8 +499,6 @@ class PadroesMixin:
                 f"MARKOV_POS_Y_V{float(markov_sim.get('V', 0.0)):.2f}_P{float(markov_sim.get('P', 0.0)):.2f}"
             )
 
-            # Reabre a leitura das regras na janela deslocada. Isso captura o caso
-            # em que o último número inicia nova contagem e empurra a expectativa.
             num_simulada = (list(sub_num) + [numero_y])[-12:]
             geo_simulada = AnalisadorContextoAvancado.mapear_padroes_geometria(pol_simulada)
             regras_simuladas = MotorContagensProjetivas.mapear_janela(
@@ -541,10 +516,6 @@ class PadroesMixin:
                     "REGRAS_POS_Y=" + ",".join(r.get("tipo_regra", "") for r in regras_simuladas)
                 )
 
-            # MAIN 98 — a rota Y consulta como o NOVO padrão contextualizado
-            # se comportou historicamente. Não basta detectar a geometria simulada:
-            # ...PVVP-Y, por exemplo, é relido por Y, 5-Y, 9-5-Y, regime,
-            # Markov, geometria, transição geométrica, regras e contagens.
             voto_padrao_y = self.obter_voto_padrao_contextual(
                 num_simulada, pol_simulada
             )
@@ -560,8 +531,6 @@ class PadroesMixin:
                     f"M{margem_ctx:.4f}_CTX{int(voto_padrao_y.get('contextos', 0))}"
                 )
 
-            # MAIN 100 — a rota Y também consulta a cartografia histórica
-            # das regras e contagens que ficariam ativas após a chegada de Y.
             voto_regra_y = self.obter_voto_regra_contextual(
                 num_simulada, pol_simulada
             )
@@ -602,7 +571,6 @@ class PadroesMixin:
             else:
                 direcao = "VERMELHO" if prob_v > prob_p else "PRETO"
 
-        # Peso limitado: a camada simula rotas, mas não se torna soberana.
         if direcao == "NEUTRO":
             peso = 0.0
         elif margem >= 0.14 and massa >= 0.65:
