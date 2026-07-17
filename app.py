@@ -87,6 +87,7 @@ st.markdown("""
     .stButton button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .footer { margin-top: 1.5rem; padding-top: 0.6rem; border-top: 1px solid #e9ecef; text-align: center; font-size: 0.7rem; color: #6c757d; }
     .json-container { background: #f8f9fa; padding: 0.5rem; border-radius: 6px; border: 1px solid #e9ecef; }
+    .progress-container { margin: 0.5rem 0; }
     @media (max-width: 768px) {
         .app-header h1 { font-size: 1.1rem; }
         .status-item { flex: 1 1 70px; }
@@ -240,9 +241,7 @@ with aba_tipo_b:
                             st.write(f"**Direcionamento Matemático:** {resultado.get('justificativa')}")
                             st.write(f"**Confiança Estatística da Rede:** {resultado.get('confianca_ia')}%")
 
-                            # ==========================
-                            # RELATÓRIO DO RADAR NUMÉRICO (RESTAURADO)
-                            # ==========================
+                            # Radar Numérico
                             radar = resultado.get("radar_numerico") or resultado.get("radar") or {}
                             with st.expander("📡 Relatório do Radar Numérico", expanded=False):
                                 if radar:
@@ -250,56 +249,48 @@ with aba_tipo_b:
                                     for chave, valor in radar.items():
                                         st.write(f"**{str(chave).replace('_',' ').title()}:** {valor}")
                                 else:
-                                    st.info("Esta versão do Motor V1 não retornou dados detalhados do Radar Numérico. Quando o módulo enviar essas informações, elas serão exibidas automaticamente aqui sem necessidade de novas alterações no app.")
+                                    st.info("Nenhum dado detalhado do Radar Numérico disponível para esta janela.")
 
-                            # ==========================
-                            # KELLY (RESTAURADO)
-                            # ==========================
+                            # Kelly
                             if resultado.get("kelly") is not None:
-                                st.success(f"💰 **Gestão de Risco (Half-Kelly Criterion):** Aporte sugerido de **{resultado.get('kelly')}% da sua banca** para esta entrada.")
+                                st.success(f"💰 **Gestão de Risco (Half-Kelly):** Aporte sugerido de **{resultado.get('kelly')}% da sua banca** para esta entrada.")
 
                     # Métricas lado a lado
                     if resultado.get("entropia") is not None:
                         col_m1, col_m2 = st.columns(2)
                         with col_m1:
                             entropia_val = resultado.get('entropia', 0)
-                            st.metric(label="Entropia de Shannon (Nível de Caos)", value=f"{entropia_val} Bits", delta="Alta Imprevisibilidade" if entropia_val > 1.52 else "Mercado Estruturado", delta_color="inverse")
+                            st.metric(label="Entropia de Shannon", value=f"{entropia_val} Bits", delta="Alta Imprevisibilidade" if entropia_val > 1.52 else "Mercado Estruturado", delta_color="inverse")
                         with col_m2:
                             markov = resultado.get("probabilidade_markov", {"V": 0, "P": 0, "B": 0})
-                            st.metric(label="Probabilidade Pura (Cadeia de Markov)", value=f"V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
+                            st.metric(label="Cadeia de Markov", value=f"V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
 
-                    # ============================================================
-                    # EXPANSORES – TODOS OS RELATÓRIOS DO ORIGINAL
-                    # ============================================================
+                    # Expansores – todos os relatórios
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
                     
                     with col_exp1:
-                        # ===== REGIME DE RECÊNCIA =====
-                        with st.expander("📊 Regime de Recência Proporcional (Filtro Dinâmico)", expanded=False):
+                        with st.expander("📊 Regime de Recência Proporcional", expanded=False):
                             if resultado.get("regime_recencia"):
                                 st.json(resultado["regime_recencia"])
                             else:
                                 st.info("Nenhum regime disponível.")
 
-                        # ===== ANÁLISE DE RARIDADE =====
-                        with st.expander("🧮 Análise de Raridade da Janela Atual", expanded=False):
+                        with st.expander("🧮 Análise de Raridade", expanded=False):
                             raridade = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
-                            st.write(f"**Streak Atual Detectado:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
-                            st.write(f"**Probabilidade Teórica de Continuação:** {raridade.get('probabilidade')}%")
-                            st.info(f"**Status Estrutural:** {raridade.get('status')}")
+                            st.write(f"**Streak Atual:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
+                            st.write(f"**Prob. Continuação:** {raridade.get('probabilidade')}%")
+                            st.info(f"**Status:** {raridade.get('status')}")
 
-                        # ===== AUDITORIA DE RACIOCÍNIO =====
-                        with st.expander("🔍 Auditoria de Raciocínio por Camadas Neurais", expanded=False):
+                        with st.expander("🔍 Auditoria de Raciocínio (Camadas)", expanded=False):
                             if resultado.get("raciocinio_trace"):
                                 for camada in resultado["raciocinio_trace"]:
                                     st.markdown(f"**Camada {camada.get('camada')} — {camada.get('nome')}**")
-                                    st.write(f"• *Saída do Módulo:* `{camada.get('resultado')}`")
-                                    st.write(f"• *Interpretação:* {camada.get('detalhe')}")
+                                    st.write(f"• *Saída:* `{camada.get('resultado')}`")
+                                    st.write(f"• *Detalhe:* {camada.get('detalhe')}")
                                     st.markdown("---")
                             else:
                                 st.info("Nenhum trace disponível.")
 
-                        # ===== VALIDAÇÃO CONTEXTUAL DA AUTORIDADE =====
                         with st.expander("📌 Validação Contextual da Autoridade", expanded=False):
                             validacao = resultado.get("validacao_contextual_autoridade", {})
                             if validacao:
@@ -307,8 +298,7 @@ with aba_tipo_b:
                             else:
                                 st.info("Nenhuma validação contextual disponível.")
 
-                        # ===== AUDITORIA CONTRAFACTUAL =====
-                        with st.expander("📋 Auditoria Contrafactual da Autorização", expanded=False):
+                        with st.expander("📋 Auditoria Contrafactual", expanded=False):
                             auditoria = resultado.get("auditoria_contrafactual_autorizacao", {})
                             if auditoria:
                                 st.json(auditoria)
@@ -316,7 +306,6 @@ with aba_tipo_b:
                                 st.info("Nenhuma auditoria contrafactual registrada.")
                     
                     with col_exp2:
-                        # ===== REGRAS OFICIAIS E CONTAGENS ATIVAS (COMPLETO) =====
                         with st.expander("🧠 Regras Oficiais e Contagens Ativas", expanded=True):
                             try:
                                 regras = MotorContagensProjetivas.mapear_janela(
@@ -324,14 +313,14 @@ with aba_tipo_b:
                                 )
                                 contagens = MotorContagensProjetivas._mapear_contagens(lista_numeros, polaridades)
 
-                                st.caption("Auditoria visual das evidências estruturais já analisadas pelo motor e encaminhadas à arbitragem do sinal.")
+                                st.caption("Evidências estruturais analisadas pelo motor.")
 
-                                st.markdown("### 📌 Evidências estruturais detectadas")
+                                st.markdown("### 📌 Evidências estruturais")
                                 if regras:
                                     for idx, r in enumerate(regras, 1):
                                         direcao = r.get("direcao", "NEUTRO")
                                         simbolo = "🔴" if direcao == "VERMELHO" else ("⚫" if direcao == "PRETO" else "⚪")
-                                        st.markdown(f"**{idx}. {simbolo} {r.get('tipo_regra', 'REGRA_NAO_IDENTIFICADA')}**")
+                                        st.markdown(f"**{idx}. {simbolo} {r.get('tipo_regra', 'REGRA')}**")
                                         st.write(f"• Família: `{r.get('familia', 'N/D')}` | Origem: `{r.get('origem', 'N/D')}`")
                                         st.write(f"• Direção: **{direcao}** | Peso: **{r.get('peso', 'N/D')}** | Validade: **{r.get('validade', 'N/D')}**")
                                         detalhes = {k: v for k, v in r.items() if k not in ("direcao", "tipo_regra", "origem", "peso", "familia", "validade")}
@@ -339,20 +328,20 @@ with aba_tipo_b:
                                             st.json(detalhes)
                                         st.markdown("---")
                                 else:
-                                    st.info("Nenhuma regra oficial com consequência ativa no fechamento desta janela.")
+                                    st.info("Nenhuma regra ativa.")
 
-                                st.markdown("### 🔢 Mapa completo das contagens projetivas")
+                                st.markdown("### 🔢 Contagens projetivas")
                                 if contagens:
-                                    resumo_status = {}
+                                    resumo = {}
                                     for c in contagens:
-                                        status_cont = c.get("status", "DESCONHECIDO")
-                                        resumo_status[status_cont] = resumo_status.get(status_cont, 0) + 1
+                                        st_cont = c.get("status", "DESCONHECIDO")
+                                        resumo[st_cont] = resumo.get(st_cont, 0) + 1
 
                                     col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-                                    with col_c1: st.metric("Abertas", resumo_status.get("ABERTA", 0))
-                                    with col_c2: st.metric("Fechadas/Vivas", resumo_status.get("FECHADA", 0) + resumo_status.get("VIVA", 0))
-                                    with col_c3: st.metric("Pagas", resumo_status.get("PAGA", 0))
-                                    with col_c4: st.metric("Mortas", resumo_status.get("MORTA", 0))
+                                    with col_c1: st.metric("Abertas", resumo.get("ABERTA", 0))
+                                    with col_c2: st.metric("Fechadas/Vivas", resumo.get("FECHADA", 0) + resumo.get("VIVA", 0))
+                                    with col_c3: st.metric("Pagas", resumo.get("PAGA", 0))
+                                    with col_c4: st.metric("Mortas", resumo.get("MORTA", 0))
 
                                     for idx, c in enumerate(contagens, 1):
                                         st.markdown(f"**Contagem {idx} — Número {c.get('numero')} — Status: `{c.get('status')}`**")
@@ -360,46 +349,43 @@ with aba_tipo_b:
                                         st.write(f"• Coexistente: {'SIM' if c.get('coexistente') else 'NÃO'} | Transicional: {'SIM' if c.get('transicional') else 'NÃO'} | Assumida por: {c.get('assumida_por') or 'NÃO'}")
                                         st.markdown("---")
                                 else:
-                                    st.info("Nenhuma contagem projetiva de 1 a 7 foi aberta nesta janela.")
+                                    st.info("Nenhuma contagem projetiva aberta.")
 
-                                # ===== LEITURA DE ARBITRAGEM (RESTAURADA) =====
+                                # Leitura de arbitragem
                                 familias = sorted({r.get("familia", "N/D") for r in regras})
-                                st.markdown("### ⚖️ Leitura de arbitragem")
-                                st.write(f"**Famílias estruturais ativas:** {', '.join(familias) if familias else 'NENHUMA'}")
-                                st.write(f"**Regra vencedora registrada pelo sinal:** `{resultado.get('regra_id', 'DESCONHECIDO')}`")
-                                st.info("As evidências podem coexistir e apontar direções diferentes. O painel não elimina regras concorrentes: mostra o mapa estrutural analisado pelo motor.")
+                                st.markdown("### ⚖️ Arbitragem")
+                                st.write(f"**Famílias ativas:** {', '.join(familias) if familias else 'NENHUMA'}")
+                                st.write(f"**Regra vencedora:** `{resultado.get('regra_id', 'DESCONHECIDO')}`")
+                                st.info("Evidências coexistem e apontam direções diferentes.")
                             except Exception as e:
                                 st.warning(f"Erro ao carregar regras: {e}")
 
-                        # ===== SIMULAÇÃO DE ROTAS =====
-                        with st.expander("📈 Simulação de Rotas (Próximos Resultados)", expanded=False):
+                        with st.expander("📈 Simulação de Rotas", expanded=False):
                             sim = resultado.get("simulacao_rotas_proximos_resultados", {})
                             if sim.get("ativo"):
                                 st.json(sim)
                             else:
                                 st.info("Simulação não disponível para esta janela.")
 
-                        # ===== CONFLUÊNCIA DE CAMADAS AMPLIADAS =====
                         with st.expander("🧩 Confluência de Camadas Ampliadas", expanded=False):
                             confluencia = resultado.get("confluencia_camadas_ampliadas", {})
                             if confluencia:
                                 st.json(confluencia)
                             else:
-                                st.info("Nenhuma confluência de camadas ampliadas disponível.")
+                                st.info("Nenhuma confluência disponível.")
 
-                        # ===== OPOSIÇÃO CAUSAL CONSOLIDADA =====
-                        with st.expander("⚖️ Oposição Causal Consolidada (Streak)", expanded=False):
+                        with st.expander("⚖️ Oposição Causal (Streak)", expanded=False):
                             oposicao = resultado.get("oposicao_causal_consolidada", {})
                             if oposicao:
                                 st.json(oposicao)
                             else:
-                                st.info("Nenhuma oposição causal consolidada registrada.")
+                                st.info("Nenhuma oposição causal registrada.")
 
             except Exception as e:
                 st.error(f"Erro ao gerar sinal: {e}")
 
 # ============================================================
-# ABA 2 — FEEDBACK (COMPLETA)
+# ABA 2 — FEEDBACK
 # ============================================================
 with aba_feedback:
     st.header("✅ Reforço Preditivo (Q-Learning)")
@@ -448,7 +434,7 @@ with aba_feedback:
                 st.error(f"Erro: {e}")
 
 # ============================================================
-# ABA 3 — AUDITORIA (COM RELATÓRIO DE RECÊNCIA COMPLETO)
+# ABA 3 — AUDITORIA (OTIMIZADA)
 # ============================================================
 with aba_tipo_d:
     st.header("📊 Auditoria Dinâmica e Treinamento")
@@ -456,97 +442,109 @@ with aba_tipo_d:
 
     arquivo_upload = st.file_uploader("Envie seu arquivo Excel (.xlsx) com resultados históricos:", type=["xlsx"])
 
+    # Armazena os dados lidos em session_state para evitar releitura
+    if "dados_upload" not in st.session_state:
+        st.session_state.dados_upload = None
+
     if arquivo_upload is not None:
-        caminho_temp = "temp_recencia.xlsx"
-        with open(caminho_temp, "wb") as f:
-            f.write(arquivo_upload.getbuffer())
-        st.info("Arquivo recebido. Selecione a ação:")
-
-        col_a1, col_a2, col_a3 = st.columns(3, gap="medium")
-        with col_a1:
-            btn_recencia = st.button("⚡ Injetar como Recência", use_container_width=True)
-        with col_a2:
-            btn_substituir = st.button("💾 Substituir Base", use_container_width=True)
-        with col_a3:
-            btn_adicionar = st.button("➕ Encadear (Anexar)", use_container_width=True)
-
-        if btn_recencia:
-            try:
+        # Lê o arquivo apenas uma vez
+        if st.session_state.dados_upload is None:
+            with st.spinner("Lendo arquivo..."):
+                caminho_temp = "temp_recencia.xlsx"
+                with open(caminho_temp, "wb") as f:
+                    f.write(arquivo_upload.getbuffer())
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
-                if dados and len(dados) >= 20:
-                    with open("base_recencia_ativa.xlsx", "wb") as f_rec:
-                        f_rec.write(arquivo_upload.getvalue())
+                if dados:
+                    st.session_state.dados_upload = dados
+                    st.session_state.arquivo_nome = arquivo_upload.name
+                else:
+                    st.error("Erro: Não foi possível ler os dados do arquivo.")
+                if os.path.exists(caminho_temp):
+                    try:
+                        os.remove(caminho_temp)
+                    except:
+                        pass
+
+        dados = st.session_state.dados_upload
+
+        if dados:
+            st.info(f"📄 Arquivo carregado: {st.session_state.arquivo_nome} ({len(dados)} registros)")
+        else:
+            st.error("Dados inválidos. Envie outro arquivo.")
+            # Reseta o cache para permitir nova tentativa
+            st.session_state.dados_upload = None
+
+        if dados and len(dados) >= 20:
+            col_a1, col_a2, col_a3 = st.columns(3, gap="medium")
+            with col_a1:
+                btn_recencia = st.button("⚡ Injetar como Recência", use_container_width=True)
+            with col_a2:
+                btn_substituir = st.button("💾 Substituir Base", use_container_width=True)
+            with col_a3:
+                btn_adicionar = st.button("➕ Encadear (Anexar)", use_container_width=True)
+
+            # ===== RECÊNCIA =====
+            if btn_recencia:
+                try:
+                    with st.spinner("Processando recência..."):
+                        # Salva o arquivo de recência ativa
+                        with open("base_recencia_ativa.xlsx", "wb") as f_rec:
+                            f_rec.write(arquivo_upload.getvalue())
                         
-                    with st.spinner("Injetando pesos na recência e absorvendo para o Longo Prazo..."):
                         resultado = motor.processar_recencia(dados)
-                    st.success("✅ Recência acoplada com sucesso e absorvida pela Base Mestra!")
+                        st.success("✅ Recência injetada com sucesso!")
 
-                    # === RELATÓRIO DO REGIME INJETADO (expanded=True) ===
-                    if resultado and isinstance(resultado, dict) and resultado.get("regime_recencia"):
-                        with st.expander("📊 Relatório de Análise do Regime Injetado", expanded=True):
-                            st.json(resultado["regime_recencia"])
+                        if resultado and isinstance(resultado, dict) and resultado.get("regime_recencia"):
+                            with st.expander("📊 Relatório do Regime Injetado", expanded=True):
+                                st.json(resultado["regime_recencia"])
 
-                    # === AUDITORIA CRONOLÓGICA DAS JANELAS (LOG COMPLETO) ===
-                    with st.spinner("Simulando auditoria cronológica das janelas móveis..."):
+                    # Auditoria (opcional, mas mantida)
+                    with st.spinner("Auditando janelas..."):
                         motor_antigo = MotorV1Completo(dados)
                         output = motor_antigo.processar_auditoria()
+                        linhas = output.split("\n")
+                        janelas = [linha for linha in linhas if "Janela" in linha]
+                        num_janelas = len(janelas)
                     
-                    # Conta o número de janelas a partir do output
-                    linhas = output.split("\n")
-                    janelas = [linha for linha in linhas if "Janela" in linha]
-                    num_janelas = len(janelas)
-                    
-                    st.subheader(f"📝 Memória de Cálculo e Taxas de Assertividade (G0, G1, G2) — {num_janelas} janelas analisadas")
-                    st.text_area("Log Completo da Auditoria Executada", output, height=500, key="auditoria_log_recencia")
-                else:
-                    st.error("Erro: A base de dados fornecida é muito pequena para estruturar um regime de recência consistente (Mínimo: 20 registros válidos).")
-            except Exception as e:
-                st.error(f"🚨 Proteção de Crash Ativada na Recência: {e}")
+                    st.subheader(f"📝 Memória de Cálculo — {num_janelas} janelas analisadas")
+                    st.text_area("Log Completo", output, height=500, key="auditoria_log_recencia")
+                except Exception as e:
+                    st.error(f"Erro: {e}")
 
-        if btn_substituir:
-            try:
-                dados = LeitorXLS(caminho_temp).ler_e_validar()
-                if dados:
-                    with st.spinner("Substituindo a base definitiva e retreinando os modelos contextuais..."):
+            # ===== SUBSTITUIR BASE =====
+            if btn_substituir:
+                try:
+                    with st.spinner("Substituindo base definitiva..."):
                         rel = motor.absorver_base_longa(dados)
-                    if rel and isinstance(rel, dict) and rel.get("sucesso"):
-                        st.success("✅ Base definitiva substituída no XLS e modelos retreinados com sucesso!")
+                    if rel and rel.get("sucesso"):
+                        st.success("✅ Base substituída e modelo retreinado!")
                         st.json(rel)
                     else:
-                        st.error(f"Falha ao substituir base: {rel.get('mensagem') if isinstance(rel, dict) else 'Erro desconhecido'}")
-                else:
-                    st.error("Erro ao validar ou ler os registros do arquivo fornecido.")
-            except Exception as e:
-                st.error(f"🚨 Proteção de Crash Ativada na Substituição: {e}")
+                        st.error(f"Erro: {rel.get('mensagem')}")
+                except Exception as e:
+                    st.error(f"Erro: {e}")
 
-        if btn_adicionar:
-            try:
-                dados = LeitorXLS(caminho_temp).ler_e_validar()
-                if dados:
-                    with st.spinner("Processando lote incremental sem recarregar a base XLS no motor..."):
+            # ===== ENCADEAR =====
+            if btn_adicionar:
+                try:
+                    with st.spinner("Anexando novos dados..."):
                         rel = motor.processar_novo_lote(dados)
-
-                    del dados
-                    gc.collect()
-
-                    if rel and isinstance(rel, dict) and rel.get("sucesso"):
-                        st.success("✅ Registros acoplados à base definitiva e persistidos no modelo pkl com sucesso!")
+                    if rel and rel.get("sucesso"):
+                        st.success("✅ Dados anexados!")
                         st.json(rel)
                     else:
-                        erro_ms = rel.get("mensagem") if isinstance(rel, dict) else "Retorno nulo da camada de salvamento."
-                        st.error(f"Falha no Encadeamento: {erro_ms}")
-                else:
-                    st.error("Erro: Nenhum dado numérico válido encontrado no arquivo enviado para encadeamento.")
-            except Exception as e:
-                gc.collect()
-                st.error(f"🚨 Erro crítico no Encadeamento Dinâmico: {type(e).__name__}: {e}")
-                st.exception(e)
-        
-        if os.path.exists(caminho_temp):
-            try:
-                os.remove(caminho_temp)
-            except:
-                pass
+                        st.error(f"Erro: {rel.get('mensagem')}")
+                except Exception as e:
+                    st.error(f"Erro: {e}")
+                    st.exception(e)
+        else:
+            if dados and len(dados) < 20:
+                st.error("Mínimo 20 registros válidos são necessários.")
+            # Se dados for None, já exibimos erro acima
+
+    else:
+        # Reset do cache quando o arquivo é removido
+        st.session_state.dados_upload = None
 
 # ============================================================
 # ABA 4 — PADRÕES (COMPLETA)
@@ -582,20 +580,17 @@ with aba_padroes:
                         rel = ia.analisar_comportamento_pos_numero()
                         for num, dados in rel.items():
                             st.markdown(f"**Número {num}**")
-                            st.write(f"• Aparições Totais: {dados.get('total_aparicoes')}")
-                            st.write(f"• Cor Predominante Posterior: `{dados.get('cor_mais_frequente_apos')}`")
-                            st.write(f"• Frequência da Dominante: {dados.get('frequencia_cor_dominante_%')}%")
-                            st.write(f"• Estabilidade Histórica: `{dados.get('estabilidade')}`")
-                            st.write(f"• Saturação de Volumetria: `{dados.get('saturacao')}`")
-                            st.write(f"• Tendência de Fluxo: `{dados.get('tendencia_recente')}`")
-                            st.write("**Distribuição Real de Frequências (V/P/B):**")
+                            st.write(f"• Total: {dados.get('total_aparicoes')}")
+                            st.write(f"• Cor predominante: {dados.get('cor_mais_frequente_apos')} ({dados.get('frequencia_cor_dominante_%')}%)")
+                            st.write(f"• Estabilidade: {dados.get('estabilidade')} | Saturação: {dados.get('saturacao')}")
+                            st.write(f"• Tendência: {dados.get('tendencia_recente')}")
                             st.json(dados.get("distribuicao_pos"))
                             st.markdown("---")
         except Exception as e:
             st.error(f"Erro na extração: {e}")
 
 # ============================================================
-# ABA 5 — CÁLCULOS (COMPLETA)
+# ABA 5 — CÁLCULOS
 # ============================================================
 with aba_matematica:
     st.header("🧮 Engine Estatístico Avançado")
@@ -614,28 +609,26 @@ with aba_matematica:
                 st.metric("Freq. Preto", f"{vies.get('frequencia_p')}%", delta=f"{vies.get('desvio_p')}%")
             with col_v2:
                 st.metric("Freq. Branco", f"{vies.get('frequencia_b')}%")
-                st.info(f"**Parecer do Motor:**\n\n{vies.get('vies')}")
+                st.info(f"**Parecer:** {vies.get('vies')}")
         except Exception as e:
             st.error(f"Erro: {e}")
 
     st.markdown("---")
-    st.subheader("💰 Simulador de Cobertura e Divisão de Aportes (Split Stake)")
-    st.caption("Cálculo exato das frações de capital de cobertura com base na margem matemática estática.")
-    
+    st.subheader("💰 Split Stake (Cobertura)")
     try:
-        stake = st.number_input("Insira o valor da sua Stake Principal na cor escolhida (R$):", min_value=1.0, max_value=5000.0, value=10.0, step=5.0)
+        stake = st.number_input("Stake principal (R$):", 1.0, 5000.0, 10.0, 5.0)
         sim = EngineMatematicoAvancado.simular_split_stake_cobertura(stake)
 
         col_s1, col_s2, col_s3 = st.columns(3)
         with col_s1:
-            st.metric(label="Aporte na Cor Principal", value=f"R$ {sim.get('stake_cor'):.2f}")
-            st.metric(label="Custo Total da Operação", value=f"R$ {sim.get('custo_total_operacao'):.2f}")
+            st.metric("Aporte na cor", f"R$ {sim.get('stake_cor'):.2f}")
+            st.metric("Custo total", f"R$ {sim.get('custo_total_operacao'):.2f}")
         with col_s2:
-            st.metric(label="Cobertura de Branco Ideal (Proporção 1/7)", value=f"R$ {sim.get('cobertura_b_ideal_1_7'):.2f}")
-            st.metric(label="Cobertura Conservadora (Proporção 1/10)", value=f"R$ {sim.get('cobertura_b_matematica_1_10'):.2f}")
+            st.metric("Cobertura Branco (1/7)", f"R$ {sim.get('cobertura_b_ideal_1_7'):.2f}")
+            st.metric("Cobertura Branco (1/10)", f"R$ {sim.get('cobertura_b_matematica_1_10'):.2f}")
         with col_s3:
-            st.metric(label="Lucro Líquido Real (Se bater o Branco)", value=f"R$ {sim.get('lucro_liquido_se_der_branco'):.2f}")
-            st.metric(label="House Edge Mapeado", value=sim.get("house_edge_estatico"))
+            st.metric("Lucro se Branco", f"R$ {sim.get('lucro_liquido_se_der_branco'):.2f}")
+            st.metric("House Edge", sim.get("house_edge_estatico"))
     except Exception as e:
         st.error(f"Erro: {e}")
 
