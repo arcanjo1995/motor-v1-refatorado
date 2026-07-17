@@ -75,12 +75,6 @@ class DerivaTemporalMixin:
     def validar_autoridade_hierarquica_contextual(self, sub_num, sub_pol, regra_id, direcao):
         """
         MAIN 115 — prova contextual da autoridade hierárquica.
-
-        Não cria regra, não troca direção e não soma famílias. Usa a cartografia
-        cronológica já treinada para verificar se a REGRA VENCEDORA continua
-        saudável no contexto atual (número final, bigrama, trigrama, padrão,
-        regime, geometria e Markov). Contexto forte contrário pode somente
-        degradar a autoridade ou converter a operação em NO CALL.
         """
         neutro = {
             "ativo": False, "status": "SEM_VALIDACAO", "vetar": False,
@@ -307,7 +301,6 @@ class DerivaTemporalMixin:
         return resultado
 
     def _mapear_deriva_temporal_basica(self, dados, chaves_alvo):
-        """Conta os cenários relevantes separando resolução em G0 e até G1."""
         resultado = {
             chave: {
                 "total": 0, "V_g0": 0, "V_g1": 0,
@@ -349,10 +342,6 @@ class DerivaTemporalMixin:
         return resultado
 
     def _mapear_deriva_temporal_regras(self, dados, tipos_alvo):
-        """
-        Mede na RECÊNCIA cada regra atualmente ativa, ocorrência por ocorrência,
-        separando resolução em G0 e até G1. O detector oficial não é alterado.
-        """
         resultado = {
             f"REGRA|{tipo}": {
                 "total": 0, "V_g0": 0, "V_g1": 0,
@@ -397,10 +386,6 @@ class DerivaTemporalMixin:
         return resultado
 
     def _resumir_trajetoria_temporal_cenario(self, pontos, historico_v_g0, historico_p_g0):
-        """
-        MAIN 113 — resume a evolução cronológica de um cenário na RECÊNCIA.
-        Não cria regra nem altera detector: apenas classifica a trajetória já observada.
-        """
         validos = [p for p in pontos if int(p.get("suporte", 0)) >= 2]
         if len(validos) < 2:
             return {
@@ -492,12 +477,6 @@ class DerivaTemporalMixin:
     def _mapear_trajetoria_deriva_temporal(
         self, dados_rec, chaves_basicas, tipos_regras, longo
     ):
-        """
-        MAIN 113 — cartografia temporal longitudinal caso a caso.
-        Divide a RECÊNCIA em blocos cronológicos e acompanha a trajetória de cada
-        número, bigrama, trigrama, padrão, streak, geometria, Markov, regime e
-        regra ativa atual: ANTES -> MUDOU -> ACELEROU -> ESTABILIZOU -> VOLTOU.
-        """
         if not dados_rec or len(dados_rec) < 40:
             return {}
 
@@ -568,11 +547,6 @@ class DerivaTemporalMixin:
         return resumo
 
     def obter_ajuste_deriva_temporal(self, sub_num, sub_pol, analise_contexto=None):
-        """
-        Compara LONGO PRAZO x RECÊNCIA por cenário e calibra a influência recente
-        pela competência observada de cada família, separando G0 de resolução até G1.
-        A camada continua gerando uma única força temporal consolidada.
-        """
         dados_rec = list(getattr(self, "dados_recencia", []) or [])
         if len(dados_rec) < 20:
             return {
