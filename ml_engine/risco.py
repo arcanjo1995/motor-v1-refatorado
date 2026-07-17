@@ -1,7 +1,10 @@
+import math
 from collections import defaultdict
 from utils.helpers import hash_chave
 from rules.analisador import AnalisadorContextoAvancado
-from config.settings import VERSAO_CHAVES_HASH
+from rules.contagens import MotorContagensProjetivas   # <-- ADICIONADO
+from config.settings import VERSAO_CHAVES_HASH        # <-- JÁ DEVERIA TER
+
 
 class RiscoMixin:
     """
