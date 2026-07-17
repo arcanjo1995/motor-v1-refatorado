@@ -197,7 +197,9 @@ class MotorUnificadoV1:
                 "motivo_real": f"NO CALL: {analise['no_call']['motivo']}",
                 "regra_id": "SISTEMA_TRAVADO",
                 "entropia": analise.get("entropia"),
-                "probabilidade_markov": analise.get("probabilidade_markov")
+                "probabilidade_markov": analise.get("probabilidade_markov"),
+                "raciocinio_trace": analise.get("camadas", []),
+                "decisao_final": {"sinal": "NO CALL", "justificativa": analise['no_call']['motivo'], "regra_id": "SISTEMA_TRAVADO"}
             }
 
         geometria = analise["geometria"]
@@ -222,42 +224,59 @@ class MotorUnificadoV1:
             ia_modelo=self.ia, entropia_shannon=analise.get("entropia", 0.0)
         )
 
+        # ============================================================
+        # CONSTRUÇÃO DA CAMADA 7.5 DETALHADA
+        # ============================================================
         validacao_contextual = getattr(self.ia, "_ultima_validacao_autoridade_contextual", {}) or {}
         if validacao_contextual.get("ativo"):
             componentes_ctx = validacao_contextual.get("componentes", {}) or {}
-            resumo_componentes = [
-                (
+            resumo_componentes = []
+            for nome, item in componentes_ctx.items():
+                parte = (
                     f"{nome}: macro {item.get('taxa_direcao_g0_g1', 0):.2f}% direção vs "
                     f"{item.get('taxa_contraria_g0_g1', 0):.2f}% contrária (n={item.get('suporte', 0)})"
-                    + (
+                )
+                if item.get('suporte_recente', 0):
+                    parte += (
                         f" | recente {item.get('taxa_direcao_recente_g0_g1', 0):.2f}% direção vs "
                         f"{item.get('taxa_contraria_recente_g0_g1', 0):.2f}% contrária "
                         f"(n={item.get('suporte_recente', 0)})"
-                        if item.get('suporte_recente', 0) else ""
                     )
-                )
-                for nome, item in componentes_ctx.items()
-            ]
+                resumo_componentes.append(parte)
+            detalhe_ctx = (
+                f"Regra: {validacao_contextual.get('regra')} | Direção preservada: {validacao_contextual.get('direcao')} | "
+                f"G0/G1 direção: {validacao_contextual.get('taxa_direcao_g0_g1', 0):.2f}% | "
+                f"Contrária: {validacao_contextual.get('taxa_contraria_g0_g1', 0):.2f}% | "
+                f"Deriva número final: {validacao_contextual.get('estado_deriva_numero_final', 'SEM_SUPORTE')} | "
+                f"Fragmentação: {validacao_contextual.get('fragmentacao_contextual', False)} | "
+                f"Contextos: {'; '.join(resumo_componentes) if resumo_componentes else 'sem componentes com suporte'}"
+            )
             analise["camadas"].append({
                 "camada": 7.5,
                 "nome": "Validação Contextual da Autoridade Hierárquica",
                 "resultado": validacao_contextual.get("status", "SEM_VALIDACAO"),
-                "detalhe": (
-                    f"Regra: {validacao_contextual.get('regra')} | Direção preservada: {validacao_contextual.get('direcao')} | "
-                    f"G0/G1 direção: {validacao_contextual.get('taxa_direcao_g0_g1', 0):.2f}% | "
-                    f"Contrária: {validacao_contextual.get('taxa_contraria_g0_g1', 0):.2f}% | "
-                    f"Deriva número final: {validacao_contextual.get('estado_deriva_numero_final', 'SEM_SUPORTE')} | "
-                    f"Fragmentação: {validacao_contextual.get('fragmentacao_contextual', False)} | "
-                    f"Contextos: {'; '.join(resumo_componentes) if resumo_componentes else 'sem componentes com suporte'}"
-                ),
+                "detalhe": detalhe_ctx,
                 "impacto": "BLOQUEIO" if validacao_contextual.get("vetar") else "VALIDACAO"
             })
+        else:
+            # Adiciona a camada 7.5 mesmo que não haja validação ativa
+            analise["camadas"].append({
+                "camada": 7.5,
+                "nome": "Validação Contextual da Autoridade Hierárquica",
+                "resultado": "SEM_VALIDACAO",
+                "detalhe": "Nenhuma validação contextual disponível para esta janela.",
+                "impacto": "NEUTRO"
+            })
 
+        # Força o NO CALL se streak >= 6 (segurança extra)
         if sinal_final != "NO CALL" and streak >= 6:
             sinal_final = "NO CALL"
             justificativa_final = f"Veto de streak {streak}x (segurança anti-tendência)"
             regra_id_final = "VETO_STREAK"
 
+        # ============================================================
+        # DECISÃO FINAL E DADOS ADICIONAIS
+        # ============================================================
         return {
             "sinal": sinal_final,
             "justificativa": justificativa_final,
@@ -273,7 +292,12 @@ class MotorUnificadoV1:
             "confluencia_camadas_ampliadas": getattr(self.ia, "ultima_confluencia_camadas_ampliadas", {}),
             "validacao_contextual_autoridade": getattr(self.ia, "_ultima_validacao_autoridade_contextual", {}),
             "oposicao_causal_consolidada": getattr(self.ia, "_ultima_oposicao_causal_consolidada", {}),
-            "auditoria_contrafactual_autorizacao": getattr(self.ia, "auditoria_contrafactual_autorizacao", {})
+            "auditoria_contrafactual_autorizacao": getattr(self.ia, "auditoria_contrafactual_autorizacao", {}),
+            "decisao_final": {
+                "sinal": sinal_final,
+                "justificativa": justificativa_final,
+                "regra_id": regra_id_final
+            }
         }
 
     def processar_feedback_real(self, sequencia_12, sinal_indicado, regra_id, numeros_saidos, classificacao,
