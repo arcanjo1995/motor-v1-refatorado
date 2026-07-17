@@ -21,15 +21,6 @@ from services.treinador import adicionar_a_base_longo_prazo
 # CONFIGURAÇÃO DA PÁGINA
 # ============================================================
 st.set_page_config(
-st.set_page_config(page_title="Motor V1", layout="wide")
-st.markdown('''
-<style>
-.block-container{padding-top:1rem;padding-bottom:1rem;max-width:1400px}
-div[data-testid="stMetric"]{background:#111827;border:1px solid #374151;border-radius:14px;padding:12px}
-.stButton>button{border-radius:12px;font-weight:600;padding:.6rem 1rem}
-h1,h2,h3{letter-spacing:.2px}
-</style>
-''', unsafe_allow_html=True)
     page_title="MOTOR V1 - Deep Learning",
     page_icon="🧠",
     layout="wide",
