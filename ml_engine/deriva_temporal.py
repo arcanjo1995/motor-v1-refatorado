@@ -1,3 +1,4 @@
+# ml_engine/deriva_temporal.py
 from collections import defaultdict
 from rules.analisador import AnalisadorContextoAvancado
 from rules.contagens import MotorContagensProjetivas
@@ -6,6 +7,74 @@ class DerivaTemporalMixin:
     """
     Mixin para Deriva Comportamental e Validação Hierárquica Contextual.
     """
+
+    # ============================================================
+    # MÉTODO ADICIONADO (estava faltando)
+    # ============================================================
+    def _chaves_deriva_temporal_cenario(self, numeros, cores):
+        """
+        MAIN 110 — descreve o cenário atual para comparar LONGO PRAZO x RECÊNCIA.
+        A camada é apenas calibradora: não altera detectores, regras ou memórias.
+        """
+        if not numeros or not cores:
+            return []
+
+        nums = [int(n) for n in numeros]
+        pol = [str(c).upper() for c in cores]
+        chaves = [f"NUM|{nums[-1]}"]
+
+        if len(nums) >= 2:
+            chaves.append(f"BI|{nums[-2]}-{nums[-1]}")
+        if len(nums) >= 3:
+            chaves.append(f"TRI|{nums[-3]}-{nums[-2]}-{nums[-1]}")
+
+        # MAIN 128 — a deriva acompanha também a forma do movimento.
+        dna_deslocamento = self._descrever_dna_deslocamento(nums[-4:])
+        if dna_deslocamento.get("ativo"):
+            chaves.append(
+                f"DELTA_TRAJ|{dna_deslocamento.get('assinatura_direcoes')}"
+                f"|{dna_deslocamento.get('assinatura_magnitudes')}"
+                f"|{dna_deslocamento.get('trajetoria')}"
+            )
+
+        gramatica_blocos = self._descrever_gramatica_blocos(pol)
+        if gramatica_blocos.get("ativo"):
+            chaves.append(f"BLOCOS|{gramatica_blocos.get('assinatura')}")
+            if gramatica_blocos.get("alternancia_blocos"):
+                chaves.append(
+                    f"ALT_BLOCOS|ATUAL={gramatica_blocos.get('tamanho_bloco_atual')}"
+                    f"|ANT={gramatica_blocos.get('tamanho_bloco_anterior')}"
+                )
+
+        for tam in (3, 4, 5, 6):
+            if len(pol) >= tam:
+                padrao = "".join(pol[-tam:])
+                if "B" not in padrao:
+                    chaves.append(f"PAD|{tam}|{padrao}")
+
+        cor_final = pol[-1]
+        if cor_final in ("V", "P"):
+            streak = 1
+            for cor in reversed(pol[:-1]):
+                if cor != cor_final:
+                    break
+                streak += 1
+            if streak >= 2:
+                chaves.append(f"STREAK|{cor_final}|{min(streak, 10)}")
+
+        geometria = AnalisadorContextoAvancado.mapear_padroes_geometria(pol[-12:])
+        chaves.append(f"GEO|{geometria}")
+
+        for ordem in (2, 4, 6):
+            if len(pol) >= ordem:
+                chaves.append(f"MARKOV|{ordem}|{''.join(pol[-ordem:])}")
+
+        modo = AnalisadorContextoAvancado.detectar_modo_mercado(
+            pol[-12:], eh_sinal_real=True, ia_modelo=None
+        )
+        chaves.append(f"REGIME|{modo}")
+
+        return list(dict.fromkeys(chaves))
 
     def mapear_deriva_comportamental_numeros(self):
         """
