@@ -1,10 +1,10 @@
 import numpy as np
-from config.settings import HAS_ML, HAS_HMM, CategoricalHMM, HMM_BACKEND
+from collections import defaultdict
+from config.settings import HAS_ML, HAS_HMM, CategoricalHMM, HMM_BACKEND, ERROS_IMPORTACAO_ML
 from utils.math_engine import EngineMatematicoAvancado
 from rules.analisador import AnalisadorContextoAvancado
 from rules.contagens import MotorContagensProjetivas
 
-# Importações do sklearn com fallback de segurança igual você já tinha feito
 try:
     from sklearn.ensemble import GradientBoostingClassifier
     from sklearn.neural_network import MLPClassifier
