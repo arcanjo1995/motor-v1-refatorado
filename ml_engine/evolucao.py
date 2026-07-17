@@ -1,6 +1,11 @@
-class EvolucaoMixin:    @staticmethod
+from collections import defaultdict
+from rules.analisador import AnalisadorContextoAvancado
+from rules.contagens import MotorContagensProjetivas
+from config.settings import HAS_ML
+
+class EvolucaoMixin:
+    @staticmethod
     def _nivel_hierarquico_regra(regra):
-        """Classifica uma regra somente na Hierarquia Oficial do MOTOR V1."""
         tipo = str((regra or {}).get("tipo_regra", "")).upper()
         familia = str((regra or {}).get("familia", "")).upper()
 
@@ -26,10 +31,6 @@ class EvolucaoMixin:    @staticmethod
         return float(item.get("autoridade_atual", 0.0) or 0.0)
 
     def _avaliar_regras_em_dados_evolutivos(self, dados, limite_janelas=6000):
-        """
-        Replay cronológico observacional por regra. Mede respeito (G0), atraso
-        (G1), deslocamento (G2) e falha sem alterar detectores ou decisões.
-        """
         mapa = defaultdict(lambda: {
             "total": 0, "respeito": 0, "atraso": 0, "deslocamento": 0, "falha": 0,
             "VERMELHO": 0, "PRETO": 0
@@ -107,14 +108,8 @@ class EvolucaoMixin:    @staticmethod
         return estado, tendencia, sucesso_h, sucesso_r, risco_h, risco_r
 
     def atualizar_matriz_evolutiva(self):
-        """
-        Matriz do Volume 16. Histórico e recência são medidos separadamente;
-        recência favorável nunca cancela NO CALL e não cria direção isolada.
-        """
         longo = list(getattr(self, "dados_longo", []) or [])
         rec = list(getattr(self, "dados_recencia", []) or [])
-        # A cauda recente da base longa é usada apenas quando não existe uma
-        # recência oficial carregada. Isso mantém o motor auditável em treinamento.
         if len(rec) < 30:
             rec = longo[-min(1200, len(longo)):]
         hist = longo[:-len(rec)] if rec and len(longo) > len(rec) else longo
@@ -170,21 +165,14 @@ class EvolucaoMixin:    @staticmethod
             "registros_recentes_considerados": len(rec)
         }
         return self.matriz_evolutiva
-       def _atualizar_ml_controlada_incremental(self, dados_combinados):
-        """
-        Atualiza GB/MLP em cauda cronológica limitada. O objetivo é impedir
-        congelamento da ML sem reconstruir features de toda a base acumulada.
-        """
+
+    def _atualizar_ml_controlada_incremental(self, dados_combinados):
         if not HAS_ML:
-            self.ml_atualizacao_incremental_metricas = {
-                "ativo": False, "motivo": "ML_INDISPONIVEL"
-            }
+            self.ml_atualizacao_incremental_metricas = {"ativo": False, "motivo": "ML_INDISPONIVEL"}
             return
         dados = list(dados_combinados or [])
         if len(dados) < 200:
-            self.ml_atualizacao_incremental_metricas = {
-                "ativo": False, "motivo": "BASE_INSUFICIENTE"
-            }
+            self.ml_atualizacao_incremental_metricas = {"ativo": False, "motivo": "BASE_INSUFICIENTE"}
             return
 
         janela_maxima = 12000
