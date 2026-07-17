@@ -67,7 +67,6 @@ st.markdown("""
     .status-item { flex: 1 1 120px; text-align: center; padding: 0.1rem 0.2rem; }
     .status-item .label { font-size: 0.55rem; text-transform: uppercase; color: #6c757d; font-weight: 600; }
     .status-item .value { font-size: 0.85rem; font-weight: 700; color: #1a1a2e; }
-    .status-item .online { color: #28a745; }
     .signal-badge {
         display: inline-block;
         padding: 0.3rem 1.4rem;
@@ -123,40 +122,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# STATUS BAR
+# STATUS BAR – DINÂMICA
 # ============================================================
 try:
     status = motor.status()
 except:
     status = {}
 
-st.markdown("""
+def status_badge(ativo, texto_ativo, texto_inativo, cor_ativo="#28a745", cor_inativo="#dc3545"):
+    if ativo:
+        return f'<span style="color:{cor_ativo};font-weight:700;">{texto_ativo}</span>'
+    else:
+        return f'<span style="color:{cor_inativo};font-weight:700;">{texto_inativo}</span>'
+
+st.markdown(f"""
 <div class="status-grid">
     <div class="status-item">
         <div class="label">🤖 IA</div>
-        <div class="value"><span class="online">ATIVA</span></div>
+        <div class="value">{status_badge(status.get('ia_carregada', False), 'ATIVA', 'INATIVA')}</div>
     </div>
     <div class="status-item">
         <div class="label">📊 Base Longa</div>
-        <div class="value"><span class="online">CARREGADA</span></div>
+        <div class="value">{status_badge(status.get('base_longa_carregada', False), 'CARREGADA', 'NÃO DETECTADA', '#28a745', '#ffc107')}</div>
     </div>
     <div class="status-item">
         <div class="label">⚡ Recência</div>
-        <div class="value"><span class="online">ATIVA</span></div>
+        <div class="value">{status_badge(status.get('recencia_injetada', False), 'ATIVA', 'AGUARDANDO', '#17a2b8', '#6c757d')}</div>
     </div>
     <div class="status-item">
         <div class="label">📈 Mestra</div>
-        <div class="value">{}</div>
+        <div class="value">{status.get('volume_longo_prazo', 0)} Giros</div>
     </div>
     <div class="status-item">
         <div class="label">🧠 Imediata</div>
-        <div class="value">{}</div>
+        <div class="value">{status.get('volume_recencia', 0)} Giros</div>
     </div>
 </div>
-""".format(
-    f"{status.get('volume_longo_prazo', 0)} Giros",
-    f"{status.get('volume_recencia', 0)} Giros"
-), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # ============================================================
 # ABAS
@@ -170,7 +172,7 @@ aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
 ])
 
 # ============================================================
-# ABA 1 — SINAL REAL (TODAS AS INFORMAÇÕES COMPLETAS)
+# ABA 1 — SINAL REAL
 # ============================================================
 with aba_tipo_b:
     st.header("🎯 Sinal Real — Predição Neural")
@@ -247,24 +249,18 @@ with aba_tipo_b:
                                 reg = resultado["regime_recencia"]
                                 st.caption(f"Regime: {reg.get('modo_dominante', 'N/D')}")
 
-                    # ============================================================
-                    # EXPANSORES COM INFORMAÇÕES COMPLETAS (SEM CORTES)
-                    # ============================================================
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
-                    
                     with col_exp1:
                         with st.expander("📊 Regime de Recência", expanded=False):
                             if resultado.get("regime_recencia"):
                                 st.json(resultado["regime_recencia"])
                             else:
                                 st.info("Nenhum regime disponível.")
-                        
                         with st.expander("🧮 Análise de Raridade", expanded=False):
                             raridade = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
                             st.write(f"**Streak:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
                             st.write(f"**Prob. continuação:** {raridade.get('probabilidade')}%")
                             st.info(f"**Status:** {raridade.get('status')}")
-                        
                         with st.expander("🔍 Auditoria de Raciocínio (Todas as Camadas)", expanded=False):
                             if resultado.get("raciocinio_trace"):
                                 for camada in resultado["raciocinio_trace"]:
@@ -274,7 +270,6 @@ with aba_tipo_b:
                                     st.markdown("---")
                             else:
                                 st.info("Nenhum trace disponível.")
-                    
                     with col_exp2:
                         with st.expander("🧠 Regras e Contagens Ativas (Completas)", expanded=False):
                             try:
@@ -282,7 +277,7 @@ with aba_tipo_b:
                                     lista_numeros, polaridades, None, getattr(motor, "ia", None)
                                 )
                                 if regras:
-                                    for r in regras:  # SEM LIMITE
+                                    for r in regras:
                                         direcao = r.get("direcao", "NEUTRO")
                                         emoji = "🔴" if direcao == "VERMELHO" else ("⚫" if direcao == "PRETO" else "⚪")
                                         st.markdown(f"{emoji} **{r.get('tipo_regra')}**")
@@ -296,7 +291,6 @@ with aba_tipo_b:
                                     st.info("Nenhuma regra ativa.")
                             except Exception as e:
                                 st.warning(f"Erro: {e}")
-                        
                         with st.expander("📈 Simulação de Rotas (Próximos Resultados)", expanded=False):
                             sim = resultado.get("simulacao_rotas_proximos_resultados", {})
                             if sim.get("ativo"):
@@ -308,7 +302,7 @@ with aba_tipo_b:
                 st.error(f"Erro ao gerar sinal: {e}")
 
 # ============================================================
-# ABA 2 — FEEDBACK (COMPLETA)
+# ABA 2 — FEEDBACK
 # ============================================================
 with aba_feedback:
     st.header("✅ Reforço Preditivo (Q-Learning)")
@@ -357,7 +351,7 @@ with aba_feedback:
                 st.error(f"Erro: {e}")
 
 # ============================================================
-# ABA 3 — AUDITORIA (COMPLETA)
+# ABA 3 — AUDITORIA
 # ============================================================
 with aba_tipo_d:
     st.header("📊 Auditoria Dinâmica e Treinamento")
@@ -435,7 +429,7 @@ with aba_tipo_d:
                 pass
 
 # ============================================================
-# ABA 4 — PADRÕES (COMPLETA)
+# ABA 4 — PADRÕES
 # ============================================================
 with aba_padroes:
     st.header("📈 Padrões Aprendidos e Memórias")
@@ -477,7 +471,7 @@ with aba_padroes:
             st.error(f"Erro na extração: {e}")
 
 # ============================================================
-# ABA 5 — CÁLCULOS (COMPLETA)
+# ABA 5 — CÁLCULOS
 # ============================================================
 with aba_matematica:
     st.header("🧮 Engine Estatístico Avançado")
