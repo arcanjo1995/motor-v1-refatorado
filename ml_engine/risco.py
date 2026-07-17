@@ -2,14 +2,19 @@ import math
 from collections import defaultdict
 from utils.helpers import hash_chave
 from rules.analisador import AnalisadorContextoAvancado
-from rules.contagens import MotorContagensProjetivas   # <-- ADICIONADO
-from config.settings import VERSAO_CHAVES_HASH        # <-- JÁ DEVERIA TER
+from rules.contagens import MotorContagensProjetivas
+from config.settings import VERSAO_CHAVES_HASH
 
 
 class RiscoMixin:
     """
     Mixin para Filtros Discriminativos, Risco G2+ e Conflitos.
     """
+
+    # ============================================================
+    # MÉTODOS EXISTENTES (mantidos)
+    # ============================================================
+
     def _chave_conflito(self, expectations, geometria, modo_mercado, probabilidade_markov):
         peso_v = 0
         peso_p = 0
@@ -76,9 +81,6 @@ class RiscoMixin:
         taxa_v_g0 = stats["V_g0"] / total
         taxa_p_g0 = stats["P_g0"] / total
 
-        # MAIN 95 — arbitragem contextual orientada a G0.
-        # G0 é o objetivo prioritário e G1 continua aceitável. O score contextual
-        # separa os dois destinos em vez de tratar G0 e G1 como equivalentes.
         score_v = (taxa_v_g0 * 0.70) + (taxa_v * 0.30)
         score_p = (taxa_p_g0 * 0.70) + (taxa_p * 0.30)
         margem_score = abs(score_v - score_p)
@@ -114,12 +116,6 @@ class RiscoMixin:
         }
 
     def _treinar_memoria_conflitos_base_longa(self, dados):
-        """Reconstrói a memória de conflitos diretamente da cronologia histórica.
-
-        Corrige a lacuna criada quando a auditoria passou a ser congelada: a
-        memória deixa de depender de ``aprender_durante_auditoria=True``.
-        Nenhuma regra de NO CALL, peso de RECÊNCIA ou direção fixa é alterada.
-        """
         self.memoria_conflitos = defaultdict(lambda: {
             "total": 0, "V_g0g1": 0, "P_g0g1": 0,
             "V_g0": 0, "P_g0": 0, "falhas_v": 0, "falhas_p": 0
@@ -153,14 +149,206 @@ class RiscoMixin:
             "versao_chaves_hash": VERSAO_CHAVES_HASH
         }
 
+    # ============================================================
+    # MÉTODO ADICIONADO (estava faltando)
+    # ============================================================
+    def _avaliar_risco_cartografia_veto(self, sub_num, sub_pol, direcao):
+        """
+        MAIN 88 — veto cartográfico discriminativo por famílias independentes.
+        Mede diretamente G2/FALHA contra G0/G1 para a direção preliminar,
+        compara cada contexto com a linha-base global da própria direção e
+        impede que granularidades correlacionadas da mesma estrutura contem
+        como confirmações independentes.
+        """
+        cfg = getattr(self, "filtro_discriminativo_config", {})
+        if not bool(cfg.get("cartografia_no_veto", True)):
+            return {"ativo": False, "leituras": [], "consultados": 0, "risco_alto": 0}
+        if not getattr(self, "cartografia_xls_metricas", {}).get("ativo"):
+            return {"ativo": False, "leituras": [], "consultados": 0, "risco_alto": 0}
+        if direcao not in ("VERMELHO", "PRETO"):
+            return {"ativo": False, "leituras": [], "consultados": 0, "risco_alto": 0}
+
+        letra = "V" if direcao == "VERMELHO" else "P"
+        suporte_min = int(cfg.get("suporte_cartografia_minimo", 30))
+        risco_alto = float(cfg.get("risco_contexto_alto", 0.22))
+        lift_minimo = float(cfg.get("lift_risco_minimo", 0.03))
+        razao_minima = float(cfg.get("razao_risco_minima", 1.10))
+        leituras = []
+
+        def fonte_da_chave(chave):
+            prefixo = str(chave).split("|", 1)[0]
+            if prefixo == "NUMERO":
+                return "CARTOGRAFIA_NUMERO"
+            if prefixo.startswith("STREAK"):
+                return "CARTOGRAFIA_STREAK"
+            if prefixo.startswith("XADREZ"):
+                return "CARTOGRAFIA_XADREZ"
+            return "CARTOGRAFIA_PADRAO"
+
+        total_base = 0
+        resolveu_base = 0
+        for chave_base, st_base in self.cartografia_padroes_xls.items():
+            if not str(chave_base).startswith("NUMERO|"):
+                continue
+            total_ctx_base = int(st_base.get("total", 0))
+            total_base += total_ctx_base
+            if letra == "V":
+                resolveu_base += int(st_base.get("V_g0", 0)) + int(st_base.get("V_g1", 0))
+            else:
+                resolveu_base += int(st_base.get("P_g0", 0)) + int(st_base.get("P_g1", 0))
+
+        taxa_base = resolveu_base / max(total_base, 1)
+        risco_base = max(0.0, min(1.0, 1.0 - taxa_base))
+
+        for chave in self._chaves_cartografia_padrao(sub_num, sub_pol):
+            st = self.cartografia_padroes_xls.get(chave)
+            if not st:
+                continue
+            total = int(st.get("total", 0))
+            if total < suporte_min:
+                continue
+
+            if letra == "V":
+                resolveu = int(st.get("V_g0", 0)) + int(st.get("V_g1", 0))
+            else:
+                resolveu = int(st.get("P_g0", 0)) + int(st.get("P_g1", 0))
+
+            taxa_resolucao = max(0.0, min(1.0, resolveu / max(total, 1)))
+            risco = 1.0 - taxa_resolucao
+            lift_risco = risco - risco_base
+            razao_risco = risco / max(risco_base, 1e-9)
+            fonte = fonte_da_chave(chave)
+
+            prefixo = str(chave).split("|", 1)[0]
+            if "EXATO" in prefixo:
+                especificidade = 1.00
+            elif "TRI" in prefixo:
+                especificidade = 0.94
+            elif "BI" in prefixo:
+                especificidade = 0.88
+            elif "NUM" in prefixo:
+                especificidade = 0.82
+            elif prefixo in ("STREAK", "XADREZ"):
+                especificidade = 0.76
+            elif prefixo == "NUMERO":
+                especificidade = 0.68
+            else:
+                especificidade = 0.60
+
+            peso = (total / (total + float(suporte_min))) * especificidade
+            leituras.append({
+                "fonte": fonte,
+                "familia": fonte,
+                "chave": chave,
+                "risco": risco,
+                "taxa_g0_g1": taxa_resolucao,
+                "risco_base": risco_base,
+                "lift_risco": lift_risco,
+                "razao_risco": razao_risco,
+                "suporte": total,
+                "peso": max(0.05, peso),
+                "tipo": "CARTOGRAFIA"
+            })
+
+        # Trajetória projetiva (apenas VERMELHO, pois V3)
+        if letra == "V":
+            total_proj_base = 0
+            resolveu_proj_base = 0
+            for stats_proj in self.estatisticas_projecoes_respeito.values():
+                total_proj_base += int(stats_proj.get("total", 0))
+                resolveu_proj_base += (
+                    int(stats_proj.get("respeitada_g0", 0))
+                    + int(stats_proj.get("respeitada_g1", 0))
+                )
+            risco_proj_base = 1.0 - (resolveu_proj_base / max(total_proj_base, 1))
+
+            projecoes_ativas = [
+                numero for pos, numero in enumerate(sub_num)
+                if 1 <= int(numero) <= 7 and pos + int(numero) in (11, 12)
+            ]
+            for numero in projecoes_ativas:
+                leitura_traj = self._obter_cartografia_projecao_atual(
+                    numero, sub_num, sub_pol
+                )
+                suporte = int(leitura_traj.get("suporte", 0))
+                if leitura_traj.get("ativo") and suporte >= suporte_min:
+                    taxa_resolucao = max(
+                        0.0, min(1.0, float(leitura_traj.get("taxa_respeito", 0.0)))
+                    )
+                    risco = 1.0 - taxa_resolucao
+                    lift_risco = risco - risco_proj_base
+                    razao_risco = risco / max(risco_proj_base, 1e-9)
+                    peso = suporte / (suporte + float(suporte_min))
+                    leituras.append({
+                        "fonte": "CARTOGRAFIA_TRAJETORIA",
+                        "familia": "CARTOGRAFIA_TRAJETORIA",
+                        "chave": f"TRAJETORIA_ATIVA|N={int(numero)}",
+                        "risco": risco,
+                        "taxa_g0_g1": taxa_resolucao,
+                        "risco_base": risco_proj_base,
+                        "lift_risco": lift_risco,
+                        "razao_risco": razao_risco,
+                        "suporte": suporte,
+                        "peso": max(0.05, peso),
+                        "tipo": "CARTOGRAFIA"
+                    })
+
+        discriminativas = [
+            item for item in leituras
+            if item["risco"] >= risco_alto
+            and item["lift_risco"] >= lift_minimo
+            and item["razao_risco"] >= razao_minima
+        ]
+
+        melhores_por_familia = {}
+        for item in discriminativas:
+            familia = item["familia"]
+            atual = melhores_por_familia.get(familia)
+            score = (item["lift_risco"], item["risco"], item["suporte"])
+            score_atual = (
+                atual["lift_risco"], atual["risco"], atual["suporte"]
+            ) if atual else None
+            if atual is None or score > score_atual:
+                melhores_por_familia[familia] = item
+
+        independentes = list(melhores_por_familia.values())
+        if independentes:
+            soma_pesos = sum(item["peso"] for item in independentes)
+            risco_estimado = sum(
+                item["risco"] * item["peso"] for item in independentes
+            ) / max(soma_pesos, 1e-9)
+            lift_estimado = sum(
+                item["lift_risco"] * item["peso"] for item in independentes
+            ) / max(soma_pesos, 1e-9)
+            razao_estimada = sum(
+                item["razao_risco"] * item["peso"] for item in independentes
+            ) / max(soma_pesos, 1e-9)
+        else:
+            risco_estimado = 0.0
+            lift_estimado = 0.0
+            razao_estimada = 1.0
+
+        return {
+            "ativo": True,
+            "leituras": leituras,
+            "consultados": len(leituras),
+            "risco_alto": len(independentes),
+            "contextos_discriminativos_brutos": len(discriminativas),
+            "fontes_risco_alto": [item["fonte"] for item in independentes],
+            "fontes_distintas_risco_alto": len(independentes),
+            "familias_independentes_risco_alto": len(independentes),
+            "risco_estimado": risco_estimado,
+            "risco_base": risco_base,
+            "lift_risco_estimado": lift_estimado,
+            "razao_risco_estimada": razao_estimada
+        }
+
+    # ============================================================
+    # MÉTODOS JÁ EXISTENTES
+    # ============================================================
     def _avaliar_instabilidade_decisoria(self, sub_num, sub_pol, direcao):
         """
         MAIN 96 — mede o desacordo entre famílias competentes.
-
-        Especialistas e camadas continuam sendo fontes de direção. Nenhuma
-        fonte contrária vira, isoladamente, fonte de erro. Primeiro os votos
-        correlacionados são consolidados em famílias independentes; só depois
-        é calculada a entropia da decisão.
         """
         analise_geo = {"geometria": AnalisadorContextoAvancado.mapear_padroes_geometria(sub_pol)}
         voto_especialistas = self.obter_voto_competencia_especialistas(
@@ -228,8 +416,6 @@ class RiscoMixin:
             if v == p or max(v, p) <= 0:
                 continue
             d = "V" if v > p else "P"
-            # Uma família vale um voto independente. A força interna serve só
-            # para registrar a margem; não multiplica fontes correlacionadas.
             peso_familia = 1.0
             if d == "V":
                 peso_v += peso_familia
@@ -276,7 +462,6 @@ class RiscoMixin:
         }
 
     def _avaliar_memoria_historica_conflito_g2_mais(self, sub_num, sub_pol, direcao, instabilidade):
-        """Risco histórico G2/FALHA do contexto de conflito já aprendido."""
         prob_markov = self.calcular_probabilidade_exata_markov(sub_pol)
         modo = AnalisadorContextoAvancado.detectar_modo_mercado(sub_pol, False, None)
         chave = self._chave_conflito(
@@ -313,11 +498,6 @@ class RiscoMixin:
     def avaliar_filtro_discriminativo_g0_g1(self, sub_num, sub_pol, direcao):
         """
         MAIN 96 — veto por instabilidade da decisão final.
-
-        O sinal só vira NO CALL quando coexistem três condições: alta entropia
-        decisória, conflito entre famílias independentes e risco histórico
-        G2/FALHA acima da linha-base. A cartografia apenas agrava/informa o
-        cenário e nunca cria veto sozinha. A direção original não é alterada.
         """
         if not self.filtro_discriminativo_metricas.get("ativo"):
             return {"ativo": False, "vetar": False, "motivo": "FILTRO_NAO_TREINADO"}
@@ -359,8 +539,6 @@ class RiscoMixin:
             and razao_historica >= razao_minima
         )
 
-        # Cartografia permanece observadora/aggravante. Ela registra turbulência
-        # histórica, mas não possui rota autônoma de veto no MAIN 96.
         risco_cartografia = float(cartografia.get("risco_estimado", 0.0))
         lift_cartografia = float(cartografia.get("lift_risco_estimado", 0.0))
         razao_cartografia = float(cartografia.get("razao_risco_estimada", 1.0))
@@ -373,15 +551,9 @@ class RiscoMixin:
             and razao_cartografia >= razao_minima
         )
 
-        # MAIN 97 — correção cirúrgica do V5.
-        # Rota A preserva integralmente o V5 original.
         rota_memoria = bool(
             entropia_alta and conflito_familias and risco_historico_comprovado
         )
-        # Rota B evita o extremo "cartografia detecta risco alto e veta zero".
-        # A cartografia só pode fechar veto quando a própria decisão está instável
-        # (entropia + conflito de famílias) E há risco cartográfico independente
-        # comprovado. Portanto não voltamos ao veto V4 amplo.
         rota_cartografia_confirmada = bool(
             entropia_alta
             and conflito_familias
@@ -466,12 +638,6 @@ class RiscoMixin:
         }
 
     def _chaves_contexto_risco_g2_mais(self, sub_num, sub_pol, direcao):
-        """
-        Gera a árvore hierárquica de risco G2+.
-        Os níveis mais específicos preservam o contexto detalhado; quando não há
-        suporte suficiente, os níveis pais permitem backoff sem tocar nas regras
-        ou especialistas já existentes.
-        """
         if direcao not in ("VERMELHO", "PRETO") or len(sub_num) < 12 or len(sub_pol) < 12:
             return []
         d = "V" if direcao == "VERMELHO" else "P"
@@ -495,10 +661,6 @@ class RiscoMixin:
         ]
 
     def _treinar_risco_g2_mais_base_longa(self):
-        """
-        Mede risco de uma direção não resolver em G0/G1.
-        Usa exclusivamente a base longa; a RECÊNCIA oficial peso 6 permanece separada.
-        """
         self.risco_g2_mais_contextos = defaultdict(lambda: {"peso_total": 0.0, "peso_risco": 0.0})
         dados = self.dados_longo or []
         if len(dados) < 500:
@@ -553,11 +715,6 @@ class RiscoMixin:
         }
 
     def avaliar_risco_g2_mais(self, sub_num, sub_pol, direcao):
-        """
-        Especialista hierárquico V2 restaurado.
-        O risco relativo adaptativo V3 foi removido integralmente.
-        A direção escolhida nunca é alterada; o módulo apenas pode vetar.
-        """
         if not self.risco_g2_mais_metricas.get("ativo"):
             return {"ativo": False, "vetar": False, "motivo": "ESPECIALISTA_NAO_TREINADO"}
 
