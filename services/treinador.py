@@ -1,17 +1,17 @@
-# services/treinador.py
-
 import os
 import time
+import json
 import pandas as pd
 from datetime import datetime
+from collections import defaultdict
 
-from config.settings import NOME_BASE_DEFINITIVA
+from config.settings import NOME_BASE_DEFINITIVA, VERSAO_CHAVES_HASH
 from data.leitor_xls import LeitorXLS
 from data.persistence import salvar_modelo_longo_prazo, carregar_modelo_longo_prazo
 from ml_engine.preditor_base import IAPreditivaV1
-from services.auditoria import MotorV1Completo
 from rules.contagens import MotorContagensProjetivas
 from rules.analisador import AnalisadorContextoAvancado
+
 
 def analisar_regime_recencia(dados_recencia):
     if not dados_recencia or len(dados_recencia) < 20:
@@ -84,6 +84,7 @@ def analisar_regime_recencia(dados_recencia):
         "pct_preto_recencia": round(pct_p, 1)
     }
 
+
 def integrar_recencia_no_modelo(dados_recencia, multiplicador=6):
     """Integra recência na instância ativa com peso oficial 6, sem persistir reinjeções."""
     multiplicador = 6
@@ -104,6 +105,7 @@ def integrar_recencia_no_modelo(dados_recencia, multiplicador=6):
     ia.recencia_foi_injetada_na_sessao = True
     return ia
 
+
 def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False):
     if not novos_dados:
         return {"sucesso": False, "mensagem": "Nenhum dado novo foi fornecido."}
@@ -115,7 +117,6 @@ def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False):
             return {"sucesso": False, "mensagem": "Não foi possível ler a base antiga."}
 
     # AUDITORIA WALK-FORWARD: mede os dados novos com o modelo histórico congelado.
-    # Somente depois da medição os novos dados são absorvidos pelo treinamento.
     auditoria_walk_forward = None
     modelo_historico = carregar_modelo_longo_prazo()
 
@@ -123,14 +124,14 @@ def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False):
         modelo_historico = IAPreditivaV1(base_existente, [])
 
     # MAIN 133 — feedback ao vivo não dispara auditoria walk-forward.
-    # A reconstrução cronológica do MAIN 132 pode produzir 13+ registros novos
-    # no primeiro segmento, mas isso continua sendo feedback operacional curto,
-    # não uma nova carga XLS destinada à auditoria histórica.
     if (
         not origem_feedback_ao_vivo
         and modelo_historico is not None
         and len(novos_dados) >= 13
     ):
+        # Import local para evitar circularidade
+        from services.auditoria import MotorV1Completo
+
         contexto_historico = base_existente[-12:] if base_existente else []
         dados_auditoria = contexto_historico + novos_dados
         motor_auditoria = MotorV1Completo(dados_auditoria, ia_existente=modelo_historico)
@@ -189,6 +190,7 @@ def adicionar_a_base_longo_prazo(novos_dados, origem_feedback_ao_vivo=False):
         relatorio_treinamento["registros_novos_absorvidos"] = len(novos_dados)
         relatorio_treinamento["auditoria_walk_forward"] = auditoria_walk_forward
     return relatorio_treinamento
+
 
 def _atualizar_metricas_cartografia_incremental(ia):
     proj_suporte20 = sum(
@@ -268,8 +270,6 @@ def _absorver_cartografia_completa_incremental(ia, dados_combinados, inicio_novo
     eventos_padrao_novos = 0
     eventos_projecao_novos = 0
 
-    # Eventos de padrão que ainda não tinham G0/G1 disponíveis na base antiga,
-    # mais todos os eventos cujo fechamento está nos dados novos.
     for i in range(max(0, inicio_novos - 2), total - 2):
         inicio = max(0, i - 11)
         sub = dados_combinados[inicio:i + 1]
@@ -299,7 +299,6 @@ def _absorver_cartografia_completa_incremental(ia, dados_combinados, inicio_novo
         ia._registrar_morfologia_estrutural(sub_num, sub_pol, c0, c1)
         eventos_padrao_novos += 1
 
-    # Projeções iniciadas no fim da base antiga podem terminar nos dados novos.
     for i in range(max(0, inicio_novos - 8), total):
         num_gatilho = int(dados_combinados[i]["numero"])
         if not 1 <= num_gatilho <= 7:
@@ -346,8 +345,6 @@ def _absorver_regras_contextuais_incremental(ia, dados_combinados, inicio_novos)
     diretas = 0
     detector_12 = 0
 
-    # A base antiga já processou até len(base_antiga)-4. Começamos exatamente
-    # nas três posições que antes não possuíam G0/G1/G2 completos.
     for i in range(max(0, inicio_novos - 3), len(dados_combinados) - 3):
         inicio = max(0, i - 11)
         sub_num = numeros[inicio:i + 1]
@@ -421,11 +418,9 @@ def _absorver_markov_incremental(ia, dados_combinados, inicio_novos):
             stats["total"] += 1
 
 
-
 def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novos):
     total_dados = len(dados_combinados)
 
-    # Projeções 1..7 cuja resolução passou a existir com a chegada do novo bloco.
     for i in range(max(0, inicio_novos - 8), total_dados):
         num = int(dados_combinados[i]["numero"])
         if not 1 <= num <= 7:
@@ -478,8 +473,6 @@ def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novo
             else:
                 stats_ctx["nao_respeitada"] += 1
 
-    # Bigramas e trigramas: começa exatamente nos fechamentos que não tinham
-    # G0/G1 completos na base antiga.
     for i in range(max(0, inicio_novos - 2), total_dados - 2):
         c0 = str(dados_combinados[i + 1]["cor"]).upper()
         c1 = str(dados_combinados[i + 2]["cor"]).upper()
@@ -508,7 +501,6 @@ def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novo
             elif c1 in ("P", "B"):
                 st["P_g1"] += 1
 
-    # Regras oficiais auditadas até G1.
     for fim in range(max(11, inicio_novos - 2), total_dados - 2):
         janela_num = [int(d["numero"]) for d in dados_combinados[fim - 11:fim + 1]]
         janela_pol = [str(d["cor"]).upper() for d in dados_combinados[fim - 11:fim + 1]]
@@ -542,7 +534,6 @@ def _absorver_estatisticas_globais_incremental(ia, dados_combinados, inicio_novo
                 elif c1 in ("P", "B"):
                     st["P_g1"] += 1
 
-    # Especialista espelho/inversão na mesma fronteira cronológica.
     for i in range(max(11, inicio_novos - 2), total_dados - 2):
         janela = dados_combinados[i-11:i+1]
         sub_num = [d["numero"] for d in janela]
@@ -677,14 +668,8 @@ def treinar_base_longo_prazo_incremental(modelo_existente, base_existente, novos
     ia = modelo_existente
     inicio_novos = len(base_existente)
 
-    # Pré-condição do fluxo incremental: modelos persistidos de versões
-    # anteriores podem ter unidade_analise incompleta ou chaves numéricas como
-    # texto. Normaliza somente essa estrutura antes de reutilizá-la.
     ia._normalizar_unidade_analise_compatibilidade()
 
-    # Preserva toda a memória histórica já treinada. Somente os registros novos
-    # são absorvidos pelas estruturas aditivas; as fronteiras cronológicas são
-    # tratadas separadamente nas cartografias abaixo.
     ia.dados_longo = dados_combinados
     ia._processar_bloco_dados(novos_dados, 1, True)
     ia._calcular_probabilidades_globais_cache()
@@ -701,10 +686,6 @@ def treinar_base_longo_prazo_incremental(modelo_existente, base_existente, novos
     reforcar_aprendizado_tipo_d(ia)
     ia.mapear_padroes_avancados(novos_dados)
 
-    # MAIN 114 — atualização controlada das memórias que antes ficavam
-    # congeladas no treinamento inicial. A memória temporal é reconstruída
-    # em fluxo único sobre a base acumulada e a ML usa somente uma cauda
-    # cronológica limitada, evitando retreinar brutalmente toda a base.
     ia._treinar_memoria_temporal_adaptativa()
     ia._atualizar_ml_controlada_incremental(dados_combinados)
     ia.atualizar_matriz_evolutiva()
@@ -740,9 +721,14 @@ def reforcar_aprendizado_tipo_d(ia):
             ia.padroes_fortes.append({"tipo": "CONTROLADOR_MUITO_FORTE", "padrao": padrao, "peso": qtd * 2})
     ia.padroes_fortes = sorted(ia.padroes_fortes, key=lambda x: x.get("peso", 0), reverse=True)[:30]
 
+
 def treinar_base_longo_prazo_com_janelas(dados_completos):
     if not dados_completos or len(dados_completos) < 30:
         return {"sucesso": False, "mensagem": "Base muito pequena para treinamento profundo."}
+
+    # Import local para evitar circularidade
+    from services.auditoria import MotorV1Completo
+
     motor = MotorV1Completo(dados_completos)
     motor.processar_auditoria()
     motor.ia.treinar_q_learning_contextual(
