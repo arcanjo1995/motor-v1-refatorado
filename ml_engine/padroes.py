@@ -1,4 +1,3 @@
-# ml_engine/padroes.py
 import math
 from collections import defaultdict
 from rules.analisador import AnalisadorContextoAvancado
@@ -8,6 +7,23 @@ class PadroesMixin:
     """
     Mixin para leitura de Z-Score, Quebradores Históricos e Simulação de Rotas.
     """
+
+    def _garantir_padrao_info(self, dicionario, chave):
+        """
+        Garante que a chave exista no dicionário com a estrutura padrão.
+        """
+        if chave not in dicionario:
+            dicionario[chave] = {
+                "total": 0,
+                "apos_V": 0,
+                "apos_P": 0,
+                "apos_B": 0,
+                "quebradores": defaultdict(int),
+                "g0": 0,
+                "g1": 0,
+                "_futuros": []
+            }
+        return dicionario[chave]
 
     def _garantir_quebradores_defaultdict(self, info):
         """
@@ -47,8 +63,7 @@ class PadroesMixin:
                     proximo_cor = cores[i+4]
                     num_quebra = numeros[i+3]
                     chave = "XADREZ_4"
-                    info = self.padroes_xadrez_detalhado[chave]
-                    info = self._garantir_quebradores_defaultdict(info)
+                    info = self._garantir_padrao_info(self.padroes_xadrez_detalhado, chave)
                     info["total"] += 1
                     info[f"apos_{proximo_cor}"] += 1
                     if proximo_cor != janela[-1]:
@@ -66,8 +81,7 @@ class PadroesMixin:
                     proximo_cor = cores[i+3]
                     num_quebra = numeros[i+3]
                     chave = "STREAK_3"
-                    info = self.padroes_streak_detalhado[chave]
-                    info = self._garantir_quebradores_defaultdict(info)
+                    info = self._garantir_padrao_info(self.padroes_streak_detalhado, chave)
                     info["total"] += 1
                     info[f"apos_{proximo_cor}"] += 1
                     if proximo_cor != cores[i]:
@@ -111,8 +125,7 @@ class PadroesMixin:
                 else: tipo_prefix = f"PADRAO_GERAL_{tam}"
                 
                 chave = f"{tipo_prefix} [{janela_str}]"
-                info = self.padroes_gerais_detalhado[chave]
-                info = self._garantir_quebradores_defaultdict(info)
+                info = self._garantir_padrao_info(self.padroes_gerais_detalhado, chave)
                 info["total"] += 1
                 info[f"apos_{proxima_cor}"] += 1
                 if eh_streak and proxima_cor != janela_cores[-1]:
@@ -144,6 +157,9 @@ class PadroesMixin:
                     elif c2 == cor_alvo or c2 == "B": info["g1"] += 1
                 if "_futuros" in info: del info["_futuros"]
 
+    # ============================================================
+    # MÉTODOS EXISTENTES (mantidos integralmente)
+    # ============================================================
     def _processar_bloco_dados(self, dados, multiplicador_peso, treinamento_profundo=False):
         if not dados or len(dados) < 3: return
         total_dados = len(dados)
