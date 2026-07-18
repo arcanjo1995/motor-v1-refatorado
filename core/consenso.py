@@ -65,8 +65,8 @@ class ConsensoPonderado:
         """
         votos = []
 
-        # 1. Regras posicionais
-        for regra in (expectativas or []):
+        # 1. Regras posicionais (expectativas)
+        for regra in (expectations or []):
             direcao = regra.get("direcao")
             if direcao not in ("VERMELHO", "PRETO"):
                 continue
@@ -96,6 +96,7 @@ class ConsensoPonderado:
         # 2. Contagens consolidadas (V3, coexistência, etc.)
         if ia_modelo and hasattr(ia_modelo, "obter_voto_contagens_consolidado"):
             try:
+                # CORRIGIDO: usa 'expectations' (parâmetro) em vez de 'expectativas'
                 voto_contagens = ia_modelo.obter_voto_contagens_consolidado(
                     sub_num, sub_pol, expectations
                 )
@@ -118,7 +119,7 @@ class ConsensoPonderado:
                             "taxa_recencia": taxa_recencia,
                             "suporte_recencia": suporte_recencia
                         })
-            except Exception:
+            except Exception as e:
                 pass
 
         # 3. IA observacional
@@ -322,7 +323,6 @@ class ConsensoPonderado:
     @staticmethod
     def _taxa_regra_recencia(ia_modelo, tipo_regra):
         """Taxa de acerto G0/G1 da regra na recência e suporte."""
-        # Será implementada no motor_unificado, armazenando em uma estrutura
         if ia_modelo and hasattr(ia_modelo, "regras_competencia_recencia"):
             stats = ia_modelo.regras_competencia_recencia.get(tipo_regra, {})
             total = stats.get("total", 0)
@@ -333,7 +333,6 @@ class ConsensoPonderado:
     @staticmethod
     def _taxa_contagem_base(ia_modelo, sub_num, sub_pol):
         """Taxa de respeito da contagem na base longa."""
-        # Simplificado: usa a taxa global de respeito das projeções
         if ia_modelo and hasattr(ia_modelo, "projecoes_respeito_metricas"):
             return ia_modelo.projecoes_respeito_metricas.get("taxa_respeito_g0_g1_percent", 50.0) / 100.0
         return 0.50
@@ -356,7 +355,11 @@ class ConsensoPonderado:
     @staticmethod
     def _taxa_ia_recencia(ia_modelo):
         """Acurácia da IA na recência."""
-        # Será implementada
+        if ia_modelo and hasattr(ia_modelo, "ia_recencia"):
+            stats = ia_modelo.ia_recencia
+            total = stats.get("total", 0)
+            if total > 0:
+                return stats.get("acertos", 0) / total, total
         return 0.50, 0
 
     @staticmethod
@@ -377,7 +380,11 @@ class ConsensoPonderado:
     @staticmethod
     def _taxa_radar_recencia(ia_modelo, numero):
         """Taxa de acerto G0/G1 do Radar na recência."""
-        # Será implementada
+        if ia_modelo and hasattr(ia_modelo, "radar_recencia"):
+            stats = ia_modelo.radar_recencia.get(numero, {})
+            total = stats.get("total", 0)
+            if total > 0:
+                return stats.get("acertos", 0) / total, total
         return 0.50, 0
 
     @staticmethod
