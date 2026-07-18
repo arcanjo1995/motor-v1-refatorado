@@ -1,3 +1,4 @@
+# services/motor_unificado.py
 import os
 import gc
 import pandas as pd
@@ -79,6 +80,26 @@ class MotorUnificadoV1:
         self.ia.recencia_foi_injetada_na_sessao = True
         self.recencia_injetada = True
 
+        # <-- RADAR: treinar Radar sobre a recência injetada
+        if self.ia is not None and hasattr(self.ia, '_treinar_radar_em_janela') and len(dados_rec) >= 13:
+            try:
+                nums = [int(d.get("numero")) for d in dados_rec]
+                pol = [str(d.get("cor", "B")).upper() for d in dados_rec]
+                for i in range(11, len(dados_rec) - 2):
+                    sub_num = nums[i-11:i+1]
+                    sub_pol = pol[i-11:i+1]
+                    g0 = int(dados_rec[i+1].get("numero", -1))
+                    g1 = int(dados_rec[i+2].get("numero", -1)) if i+2 < len(dados_rec) else None
+                    if g0 < 0:
+                        continue
+                    try:
+                        analise = MotorAnalise.analisar_janela(sub_num, sub_pol, self.ia, eh_sinal_real=False)
+                        self.ia._treinar_radar_em_janela(sub_num, sub_pol, g0, g1, analise)
+                    except Exception as e:
+                        self.ia._treinar_radar_em_janela(sub_num, sub_pol, g0, g1, None)
+            except Exception as e:
+                print(f"[RADAR] Erro ao treinar Radar com recência: {e}")
+
     def absorver_base_longa(self, dados_novos):
         if not dados_novos or len(dados_novos) < 30:
             return {"sucesso": False, "mensagem": "Base muito pequena."}
@@ -155,6 +176,27 @@ class MotorUnificadoV1:
         self.ia.regime_recencia = self.regime_recencia
         self.ia.atualizar_matriz_evolutiva()
         salvar_modelo_longo_prazo(self.ia)
+
+        # <-- RADAR: treinar Radar sobre a recência processada
+        if self.ia is not None and hasattr(self.ia, '_treinar_radar_em_janela') and len(dados_recencia_ativos) >= 13:
+            try:
+                nums = [int(d.get("numero")) for d in dados_recencia_ativos]
+                pol = [str(d.get("cor", "B")).upper() for d in dados_recencia_ativos]
+                for i in range(11, len(dados_recencia_ativos) - 2):
+                    sub_num = nums[i-11:i+1]
+                    sub_pol = pol[i-11:i+1]
+                    g0 = int(dados_recencia_ativos[i+1].get("numero", -1))
+                    g1 = int(dados_recencia_ativos[i+2].get("numero", -1)) if i+2 < len(dados_recencia_ativos) else None
+                    if g0 < 0:
+                        continue
+                    try:
+                        analise = MotorAnalise.analisar_janela(sub_num, sub_pol, self.ia, eh_sinal_real=False)
+                        self.ia._treinar_radar_em_janela(sub_num, sub_pol, g0, g1, analise)
+                    except Exception as e:
+                        self.ia._treinar_radar_em_janela(sub_num, sub_pol, g0, g1, None)
+            except Exception as e:
+                print(f"[RADAR] Erro ao treinar Radar com recência processada: {e}")
+
         return {
             "sucesso": True,
             "registros_processados": len(dados_recencia),
@@ -203,7 +245,8 @@ class MotorUnificadoV1:
             modo_mercado=modo_mercado, streak_atual=streak, xadrez_len=xadrez_len,
             xadrez_quebrou=xadrez_quebrou,
             contexto_exaustao=contexto_exaustao, probabilidade_markov=analise.get("probabilidade_markov"),
-            ia_modelo=self.ia, entropia_shannon=analise.get("entropia", 0.0)
+            ia_modelo=self.ia, entropia_shannon=analise.get("entropia", 0.0),
+            influencia_radar=analise.get("influencia_radar")  # <-- RADAR: passa influência
         )
         validacao_contextual = getattr(self.ia, "_ultima_validacao_autoridade_contextual", {}) or {}
         if validacao_contextual.get("ativo"):
@@ -248,6 +291,15 @@ class MotorUnificadoV1:
             sinal_final = "NO CALL"
             justificativa_final = f"Veto de streak {streak}x (segurança anti-tendência)"
             regra_id_final = "VETO_STREAK"
+
+        # <-- RADAR: gerar relatório detalhado do Radar se disponível
+        relatorio_radar = None
+        if self.ia is not None and hasattr(self.ia, 'gerar_relatorio_radar'):
+            try:
+                relatorio_radar = self.ia.gerar_relatorio_radar(sequencia_12, polaridades, analise)
+            except Exception as e:
+                relatorio_radar = {"erro": str(e)}
+
         return {
             "sinal": sinal_final,
             "justificativa": justificativa_final,
@@ -264,6 +316,7 @@ class MotorUnificadoV1:
             "validacao_contextual_autoridade": getattr(self.ia, "_ultima_validacao_autoridade_contextual", {}),
             "oposicao_causal_consolidada": getattr(self.ia, "_ultima_oposicao_causal_consolidada", {}),
             "auditoria_contrafactual_autorizacao": getattr(self.ia, "auditoria_contrafactual_autorizacao", {}),
+            "relatorio_radar": relatorio_radar,  # <-- RADAR
             "decisao_final": {
                 "sinal": sinal_final,
                 "justificativa": justificativa_final,
@@ -407,6 +460,20 @@ class MotorUnificadoV1:
         recencia_atual = self.ia.dados_recencia.copy() if self.ia else []
         cronologia_ao_vivo_atual = list(getattr(self.ia, "cronologia_ao_vivo", []) or [])
         rel = adicionar_a_base_longo_prazo(dados_novos_para_arquivo, origem_feedback_ao_vivo=True)
+
+        # <-- RADAR: processar feedback para o Radar
+        if self.ia is not None and hasattr(self.ia, '_processar_feedback_radar'):
+            try:
+                self.ia._processar_feedback_radar(
+                    sequencia_12,
+                    polaridades,
+                    numeros_saidos,
+                    analise,
+                    classificacao_limpa
+                )
+            except Exception as e:
+                print(f"[RADAR] Falha ao processar feedback: {e}")
+
         self.carregar_tudo(forcar_recencia=False)
         if self.ia:
             self.ia.cronologia_ao_vivo = cronologia_ao_vivo_atual[-5000:]
