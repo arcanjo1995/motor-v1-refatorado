@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 import json
 import gc
-import pandas as pd  # <-- ADICIONADO PARA O RELATÓRIO DO RADAR
+import pandas as pd
 
 # ---------------------------------------------------------
 # IMPORTAÇÕES
@@ -176,7 +176,7 @@ aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
 ])
 
 # ============================================================
-# ABA 1 — SINAL REAL (COM RELATÓRIO DO RADAR POSICIONADO)
+# ABA 1 — SINAL REAL (COM RELATÓRIO DO RADAR)
 # ============================================================
 with aba_tipo_b:
     st.header("🎯 Sinal Real — Predição Neural")
@@ -244,9 +244,7 @@ with aba_tipo_b:
                             st.write(f"**Direcionamento Matemático:** {resultado.get('justificativa')}")
                             st.write(f"**Confiança Estatística da Rede:** {resultado.get('confianca_ia')}%")
 
-                    # =========================================================
                     # MÉTRICAS: ENTROPIA E PROBABILIDADE MARKOV
-                    # =========================================================
                     if resultado.get("entropia") is not None:
                         col_m1, col_m2 = st.columns(2)
                         with col_m1:
@@ -257,14 +255,13 @@ with aba_tipo_b:
                             st.metric(label="Probabilidade Pura (Cadeia de Markov)", value=f"V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
 
                     # =========================================================
-                    # <-- RADAR: RELATÓRIO DO RADAR NUMÉRICO (POSICIONADO AQUI)
+                    # RELATÓRIO DO RADAR NUMÉRICO
                     # =========================================================
                     radar = resultado.get("relatorio_radar")
                     if radar:
                         with st.expander("🎯 RADAR NUMÉRICO - Análise Contextual", expanded=True):
                             st.markdown("### 📊 Distribuição de Probabilidades")
                             
-                            # Tabela principal com pandas
                             df_radar = pd.DataFrame(radar["tabela"])
                             df_radar = df_radar.rename(columns={
                                 "numero": "Número",
@@ -273,7 +270,6 @@ with aba_tipo_b:
                                 "ao_vivo": "Ao Vivo %",
                                 "consenso": "Consenso %"
                             })
-                            # Destacar o número dominante
                             def highlight_dominante(row):
                                 if row["Número"] == radar["numero_dominante"]:
                                     return ['background-color: #ffffcc'] * len(row)
@@ -317,7 +313,6 @@ with aba_tipo_b:
                             
                             st.caption("Fonte: Consenso entre Base de Longo Prazo, Recência e Sequência Ao Vivo.")
                     else:
-                        # Se o Radar ainda não tem dados, exibe um placeholder
                         with st.expander("🎯 RADAR NUMÉRICO - Análise Contextual", expanded=False):
                             st.info("📡 O Radar Numérico ainda está coletando dados. Após processar algumas janelas (Base + Recência), o relatório detalhado aparecerá aqui.")
 
@@ -327,21 +322,18 @@ with aba_tipo_b:
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
                     
                     with col_exp1:
-                        # ===== REGIME DE RECÊNCIA =====
                         with st.expander("📊 Regime de Recência Proporcional (Filtro Dinâmico)", expanded=False):
                             if resultado.get("regime_recencia"):
                                 st.json(resultado["regime_recencia"])
                             else:
                                 st.info("Nenhum regime disponível.")
 
-                        # ===== ANÁLISE DE RARIDADE =====
                         with st.expander("🧮 Análise de Raridade da Janela Atual", expanded=False):
                             raridade = EngineMatematicoAvancado.calcular_raridade_sequencia(polaridades)
                             st.write(f"**Streak Atual Detectado:** {raridade.get('streak')}x da cor {raridade.get('cor_sequencia')}")
                             st.write(f"**Probabilidade Teórica de Continuação:** {raridade.get('probabilidade')}%")
                             st.info(f"**Status Estrutural:** {raridade.get('status')}")
 
-                        # ===== AUDITORIA DE RACIOCÍNIO =====
                         with st.expander("🔍 Auditoria de Raciocínio por Camadas Neurais", expanded=False):
                             if resultado.get("raciocinio_trace"):
                                 for camada in resultado["raciocinio_trace"]:
@@ -352,7 +344,6 @@ with aba_tipo_b:
                             else:
                                 st.info("Nenhum trace disponível.")
 
-                        # ===== VALIDAÇÃO CONTEXTUAL DA AUTORIDADE =====
                         with st.expander("📌 Validação Contextual da Autoridade", expanded=False):
                             validacao = resultado.get("validacao_contextual_autoridade", {})
                             if validacao:
@@ -360,7 +351,6 @@ with aba_tipo_b:
                             else:
                                 st.info("Nenhuma validação contextual disponível.")
 
-                        # ===== AUDITORIA CONTRAFACTUAL =====
                         with st.expander("📋 Auditoria Contrafactual da Autorização", expanded=False):
                             auditoria = resultado.get("auditoria_contrafactual_autorizacao", {})
                             if auditoria:
@@ -369,7 +359,6 @@ with aba_tipo_b:
                                 st.info("Nenhuma auditoria contrafactual registrada.")
                     
                     with col_exp2:
-                        # ===== REGRAS OFICIAIS E CONTAGENS ATIVAS (COMPLETO) =====
                         with st.expander("🧠 Regras Oficiais e Contagens Ativas", expanded=True):
                             try:
                                 regras = MotorContagensProjetivas.mapear_janela(
@@ -415,7 +404,6 @@ with aba_tipo_b:
                                 else:
                                     st.info("Nenhuma contagem projetiva de 1 a 7 foi aberta nesta janela.")
 
-                                # ===== LEITURA DE ARBITRAGEM =====
                                 familias = sorted({r.get("familia", "N/D") for r in regras})
                                 st.markdown("### ⚖️ Leitura de arbitragem")
                                 st.write(f"**Famílias estruturais ativas:** {', '.join(familias) if familias else 'NENHUMA'}")
@@ -424,7 +412,6 @@ with aba_tipo_b:
                             except Exception as e:
                                 st.warning(f"Erro ao carregar regras: {e}")
 
-                        # ===== SIMULAÇÃO DE ROTAS =====
                         with st.expander("📈 Simulação de Rotas (Próximos Resultados)", expanded=False):
                             sim = resultado.get("simulacao_rotas_proximos_resultados", {})
                             if sim.get("ativo"):
@@ -432,7 +419,6 @@ with aba_tipo_b:
                             else:
                                 st.info("Simulação não disponível para esta janela.")
 
-                        # ===== CONFLUÊNCIA DE CAMADAS AMPLIADAS =====
                         with st.expander("🧩 Confluência de Camadas Ampliadas", expanded=False):
                             confluencia = resultado.get("confluencia_camadas_ampliadas", {})
                             if confluencia:
@@ -440,7 +426,6 @@ with aba_tipo_b:
                             else:
                                 st.info("Nenhuma confluência de camadas ampliadas disponível.")
 
-                        # ===== OPOSIÇÃO CAUSAL CONSOLIDADA =====
                         with st.expander("⚖️ Oposição Causal Consolidada (Streak)", expanded=False):
                             oposicao = resultado.get("oposicao_causal_consolidada", {})
                             if oposicao:
@@ -523,9 +508,6 @@ with aba_tipo_d:
         with col_a3:
             btn_adicionar = st.button("➕ Encadear (Anexar)", use_container_width=True)
 
-        # ---------------------------------------------------------
-        # BOTÃO "INJETAR RECÊNCIA" – COM BARRA DE PROGRESSO
-        # ---------------------------------------------------------
         if btn_recencia:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
@@ -567,9 +549,6 @@ with aba_tipo_d:
             except Exception as e:
                 st.error(f"🚨 Proteção de Crash Ativada na Recência: {e}")
 
-        # ---------------------------------------------------------
-        # BOTÃO "SUBSTITUIR BASE" – COM BARRA DE PROGRESSO
-        # ---------------------------------------------------------
         if btn_substituir:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
@@ -597,9 +576,6 @@ with aba_tipo_d:
             except Exception as e:
                 st.error(f"🚨 Proteção de Crash Ativada na Substituição: {e}")
 
-        # ---------------------------------------------------------
-        # BOTÃO "ENCADEAR (ANEXAR)" – COM BARRA DE PROGRESSO
-        # ---------------------------------------------------------
         if btn_adicionar:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
@@ -642,50 +618,242 @@ with aba_tipo_d:
                 pass
 
 # ============================================================
-# ABA 4 — PADRÕES (COMPLETA)
+# ABA 4 — PADRÕES APRENDIDOS (COMPLETO COM TODOS OS RELATÓRIOS)
 # ============================================================
 with aba_padroes:
-    st.header("📈 Padrões Aprendidos e Memórias")
-    st.caption("Varredura profunda da Q-Table e destrinchadores numéricos.")
+    st.header("📈 Padrões Aprendidos e Memórias do Motor")
+    st.caption("Varredura completa de todas as memórias contextuais, cartografias e estatísticas do modelo.")
 
-    if st.button("🔄 Extrair Memória do Modelo", use_container_width=True, type="primary"):
-        try:
-            ia = carregar_modelo_longo_prazo()
-            if ia is None:
-                st.warning("Modelo não encontrado. Treine a base primeiro.")
-            else:
-                st.success("✅ Modelo carregado!")
-                
-                with st.expander("🤖 Q-Table (Agente RL)", expanded=False):
-                    if ia.q_table:
-                        st.write(f"**Estados contextuais aprendidos:** {len(ia.q_table)}")
-                        st.json(ia.q_table)
-                    else:
-                        st.info("Q-Table vazia.")
-                
-                with st.expander("📐 Competência das Regras", expanded=False):
-                    if hasattr(ia, 'regras_competencia_cronologica') and ia.regras_competencia_cronologica:
-                        for regra, stats in ia.regras_competencia_cronologica.items():
-                            st.write(f"**{regra}:** {stats.get('taxa_g0_g1', 0):.2f}% (n={stats.get('total_validacao', 0)})")
-                    else:
-                        st.info("Nenhuma competência registrada.")
-                
-                with st.expander("🔢 Comportamento Pós-Número (Completo)", expanded=False):
-                    if hasattr(ia, 'analisar_comportamento_pos_numero'):
-                        rel = ia.analisar_comportamento_pos_numero()
-                        for num, dados in rel.items():
-                            st.markdown(f"**Número {num}**")
-                            st.write(f"• Aparições Totais: {dados.get('total_aparicoes')}")
-                            st.write(f"• Cor Predominante Posterior: `{dados.get('cor_mais_frequente_apos')}`")
-                            st.write(f"• Frequência da Dominante: {dados.get('frequencia_cor_dominante_%')}%")
-                            st.write(f"• Estabilidade Histórica: `{dados.get('estabilidade')}`")
-                            st.write(f"• Saturação de Volumetria: `{dados.get('saturacao')}`")
-                            st.write(f"• Tendência de Fluxo: `{dados.get('tendencia_recente')}`")
-                            st.write("**Distribuição Real de Frequências (V/P/B):**")
-                            st.json(dados.get("distribuicao_pos"))
-                            st.markdown("---")
-        except Exception as e:
-            st.error(f"Erro na extração: {e}")
+    col_botao1, col_botao2 = st.columns([1, 3])
+    with col_botao1:
+        if st.button("🔄 Recarregar Modelo", use_container_width=True, type="primary"):
+            with st.spinner("Recarregando modelo..."):
+                motor.carregar_tudo()
+                st.success("Modelo recarregado!")
+
+    with col_botao2:
+        st.caption("Clique em 'Recarregar Modelo' para atualizar as memórias após treinamentos.")
+
+    # Usa o modelo já carregado no motor, ou carrega do disco
+    ia = getattr(motor, "ia", None)
+    if ia is None:
+        ia = carregar_modelo_longo_prazo()
+        if ia is None:
+            st.warning("Nenhum modelo carregado. Treine a base primeiro.")
+            st.stop()
+
+    st.success(f"✅ Modelo carregado com sucesso! (Base: {len(ia.dados_longo) if hasattr(ia, 'dados_longo') else '?'} registros)")
+
+    # ------------------------------------------------------------
+    # 1. Q-Table
+    # ------------------------------------------------------------
+    with st.expander("🤖 Q-Table (Agente RL)", expanded=False):
+        if hasattr(ia, 'q_table') and ia.q_table:
+            st.write(f"**Estados contextuais aprendidos:** {len(ia.q_table)}")
+            st.json(ia.q_table)
+        else:
+            st.info("Q-Table vazia ou não disponível.")
+
+    # ------------------------------------------------------------
+    # 2. Competência das Regras
+    # ------------------------------------------------------------
+    with st.expander("📐 Competência das Regras (80/20 cronológico)", expanded=False):
+        if hasattr(ia, 'regras_competencia_cronologica') and ia.regras_competencia_cronologica:
+            df_regras = pd.DataFrame.from_dict(ia.regras_competencia_cronologica, orient='index')
+            st.dataframe(df_regras, use_container_width=True)
+        else:
+            st.info("Nenhuma competência registrada.")
+
+    # ------------------------------------------------------------
+    # 3. Comportamento Pós-Número
+    # ------------------------------------------------------------
+    with st.expander("🔢 Comportamento Pós-Número (Histórico)", expanded=False):
+        if hasattr(ia, 'analisar_comportamento_pos_numero'):
+            rel = ia.analisar_comportamento_pos_numero()
+            for num, dados in rel.items():
+                st.markdown(f"**Número {num}**")
+                st.write(f"• Aparições Totais: {dados.get('total_aparicoes')}")
+                st.write(f"• Cor Predominante Posterior: `{dados.get('cor_mais_frequente_apos')}`")
+                st.write(f"• Frequência da Dominante: {dados.get('frequencia_cor_dominante_%')}%")
+                st.write(f"• Estabilidade Histórica: `{dados.get('estabilidade')}`")
+                st.write(f"• Saturação de Volumetria: `{dados.get('saturacao')}`")
+                st.write(f"• Tendência de Fluxo: `{dados.get('tendencia_recente')}`")
+                st.write("**Distribuição Real de Frequências (V/P/B):**")
+                st.json(dados.get("distribuicao_pos"))
+                st.markdown("---")
+        else:
+            st.info("Comportamento pós-número não disponível.")
+
+    # ------------------------------------------------------------
+    # 4. Cartografia de Padrões (XLS)
+    # ------------------------------------------------------------
+    with st.expander("📊 Cartografia de Padrões (XLS) – Streaks, Xadrez e Números", expanded=False):
+        if hasattr(ia, 'cartografia_padroes_xls') and ia.cartografia_padroes_xls:
+            st.write(f"**Contextos aprendidos:** {len(ia.cartografia_padroes_xls)}")
+            # Mostra apenas os 50 primeiros para não sobrecarregar
+            amostra = dict(list(ia.cartografia_padroes_xls.items())[:50])
+            st.json(amostra)
+            if len(ia.cartografia_padroes_xls) > 50:
+                st.caption(f"Exibindo 50 de {len(ia.cartografia_padroes_xls)} contextos. Consulte o log completo para ver todos.")
+        else:
+            st.info("Cartografia de padrões não disponível.")
+
+    # ------------------------------------------------------------
+    # 5. Cartografia Contextual de Padrões
+    # ------------------------------------------------------------
+    with st.expander("🧩 Cartografia Contextual de Padrões (condicionada a contexto)", expanded=False):
+        if hasattr(ia, 'cartografia_padroes_contextual') and ia.cartografia_padroes_contextual:
+            st.write(f"**Contextos aprendidos:** {len(ia.cartografia_padroes_contextual)}")
+            amostra = dict(list(ia.cartografia_padroes_contextual.items())[:50])
+            st.json(amostra)
+            if len(ia.cartografia_padroes_contextual) > 50:
+                st.caption(f"Exibindo 50 de {len(ia.cartografia_padroes_contextual)} contextos.")
+        else:
+            st.info("Cartografia contextual de padrões não disponível.")
+
+    # ------------------------------------------------------------
+    # 6. Cartografia de Trajetória de Streak
+    # ------------------------------------------------------------
+    with st.expander("🔄 Cartografia de Trajetória de Streak (nascimento → confirmação → expansão)", expanded=False):
+        if hasattr(ia, 'cartografia_trajetoria_streak') and ia.cartografia_trajetoria_streak:
+            st.write(f"**Contextos aprendidos:** {len(ia.cartografia_trajetoria_streak)}")
+            amostra = dict(list(ia.cartografia_trajetoria_streak.items())[:50])
+            st.json(amostra)
+            if len(ia.cartografia_trajetoria_streak) > 50:
+                st.caption(f"Exibindo 50 de {len(ia.cartografia_trajetoria_streak)} contextos.")
+        else:
+            st.info("Cartografia de trajetória de streak não disponível.")
+
+    # ------------------------------------------------------------
+    # 7. Cartografia de Morfologia Estrutural
+    # ------------------------------------------------------------
+    with st.expander("🧬 Cartografia de Morfologia Estrutural (forma dos blocos)", expanded=False):
+        if hasattr(ia, 'cartografia_morfologia_estrutural') and ia.cartografia_morfologia_estrutural:
+            st.write(f"**Contextos aprendidos:** {len(ia.cartografia_morfologia_estrutural)}")
+            amostra = dict(list(ia.cartografia_morfologia_estrutural.items())[:50])
+            st.json(amostra)
+            if len(ia.cartografia_morfologia_estrutural) > 50:
+                st.caption(f"Exibindo 50 de {len(ia.cartografia_morfologia_estrutural)} contextos.")
+        else:
+            st.info("Cartografia de morfologia estrutural não disponível.")
+
+    # ------------------------------------------------------------
+    # 8. Cartografia de Regras e Contagens
+    # ------------------------------------------------------------
+    with st.expander("📋 Cartografia de Regras e Contagens (contexto de cada regra)", expanded=False):
+        if hasattr(ia, 'cartografia_regras_contextual') and ia.cartografia_regras_contextual:
+            st.write(f"**Contextos aprendidos:** {len(ia.cartografia_regras_contextual)}")
+            amostra = dict(list(ia.cartografia_regras_contextual.items())[:50])
+            st.json(amostra)
+            if len(ia.cartografia_regras_contextual) > 50:
+                st.caption(f"Exibindo 50 de {len(ia.cartografia_regras_contextual)} contextos.")
+        else:
+            st.info("Cartografia de regras e contagens não disponível.")
+
+    # ------------------------------------------------------------
+    # 9. Estatísticas de Projeções (Respeito)
+    # ------------------------------------------------------------
+    with st.expander("🎯 Estatísticas de Projeções (Respeito das contagens V3)", expanded=False):
+        if hasattr(ia, 'estatisticas_projecoes_respeito') and ia.estatisticas_projecoes_respeito:
+            st.json(ia.estatisticas_projecoes_respeito)
+        else:
+            st.info("Estatísticas de projeções não disponíveis.")
+
+    # ------------------------------------------------------------
+    # 10. Memória de Conflitos
+    # ------------------------------------------------------------
+    with st.expander("⚔️ Memória de Conflitos entre Regras", expanded=False):
+        if hasattr(ia, 'memoria_conflitos') and ia.memoria_conflitos:
+            st.write(f"**Contextos de conflito aprendidos:** {len(ia.memoria_conflitos)}")
+            amostra = dict(list(ia.memoria_conflitos.items())[:50])
+            st.json(amostra)
+            if len(ia.memoria_conflitos) > 50:
+                st.caption(f"Exibindo 50 de {len(ia.memoria_conflitos)} contextos.")
+        else:
+            st.info("Memória de conflitos não disponível.")
+
+    # ------------------------------------------------------------
+    # 11. Especialista de Risco G2+
+    # ------------------------------------------------------------
+    with st.expander("⚠️ Especialista de Risco G2+ (Risco de não resolver até G1)", expanded=False):
+        if hasattr(ia, 'risco_g2_mais_contextos') and ia.risco_g2_mais_contextos:
+            st.write(f"**Contextos de risco aprendidos:** {len(ia.risco_g2_mais_contextos)}")
+            amostra = dict(list(ia.risco_g2_mais_contextos.items())[:50])
+            st.json(amostra)
+            if len(ia.risco_g2_mais_contextos) > 50:
+                st.caption(f"Exibindo 50 de {len(ia.risco_g2_mais_contextos)} contextos.")
+        else:
+            st.info("Especialista de risco G2+ não disponível.")
+
+    # ------------------------------------------------------------
+    # 12. Filtro Discriminativo
+    # ------------------------------------------------------------
+    with st.expander("🔍 Filtro Discriminativo (G0/G1 vs G2+)", expanded=False):
+        if hasattr(ia, 'filtro_discriminativo_metricas') and ia.filtro_discriminativo_metricas:
+            st.json(ia.filtro_discriminativo_metricas)
+        else:
+            st.info("Filtro discriminativo não disponível.")
+
+    # ------------------------------------------------------------
+    # 13. Matriz Evolutiva
+    # ------------------------------------------------------------
+    with st.expander("📈 Matriz Evolutiva (evolução das regras)", expanded=False):
+        if hasattr(ia, 'matriz_evolutiva') and ia.matriz_evolutiva:
+            st.json(ia.matriz_evolutiva)
+        else:
+            st.info("Matriz evolutiva não disponível.")
+
+    # ------------------------------------------------------------
+    # 14. Matriz de Deriva Comportamental
+    # ------------------------------------------------------------
+    with st.expander("🧭 Matriz de Deriva Comportamental (mudança de comportamento por número)", expanded=False):
+        if hasattr(ia, 'matriz_deriva_comportamental') and ia.matriz_deriva_comportamental:
+            st.json(ia.matriz_deriva_comportamental)
+        else:
+            st.info("Matriz de deriva comportamental não disponível.")
+
+    # ------------------------------------------------------------
+    # 15. Memória Temporal Adaptativa
+    # ------------------------------------------------------------
+    with st.expander("⏳ Memória Temporal Adaptativa (Markov temporal)", expanded=False):
+        if hasattr(ia, 'temporal_metricas') and ia.temporal_metricas:
+            st.json(ia.temporal_metricas)
+        else:
+            st.info("Memória temporal adaptativa não disponível.")
+
+    # ------------------------------------------------------------
+    # 16. ML Metrics
+    # ------------------------------------------------------------
+    with st.expander("🧠 Métricas de Machine Learning (GB + MLP + HMM)", expanded=False):
+        if hasattr(ia, 'ml_metricas') and ia.ml_metricas:
+            st.json(ia.ml_metricas)
+            if hasattr(ia, 'ml_pesos') and ia.ml_pesos:
+                st.write("**Pesos dos modelos:**")
+                st.json(ia.ml_pesos)
+        else:
+            st.info("Métricas de ML não disponíveis.")
+
+    # ------------------------------------------------------------
+    # 17. Q-Learning Contextual
+    # ------------------------------------------------------------
+    with st.expander("🧠 Q-Learning Contextual (métricas do agente)", expanded=False):
+        if hasattr(ia, 'q_learning_contextual_metricas') and ia.q_learning_contextual_metricas:
+            st.json(ia.q_learning_contextual_metricas)
+        else:
+            st.info("Métricas de Q-Learning contextual não disponíveis.")
+
+    # ------------------------------------------------------------
+    # 18. Memória do Radar Numérico
+    # ------------------------------------------------------------
+    with st.expander("📡 Memória do Radar Numérico (acertos por contexto)", expanded=False):
+        if hasattr(ia, 'memoria_radar') and ia.memoria_radar:
+            st.write(f"**Contextos de previsão aprendidos:** {len(ia.memoria_radar)}")
+            amostra = dict(list(ia.memoria_radar.items())[:50])
+            st.json(amostra)
+            if len(ia.memoria_radar) > 50:
+                st.caption(f"Exibindo 50 de {len(ia.memoria_radar)} contextos.")
+        else:
+            st.info("Memória do Radar Numérico não disponível (o Radar ainda não foi treinado).")
 
 # ============================================================
 # ABA 5 — CÁLCULOS (COMPLETA)
