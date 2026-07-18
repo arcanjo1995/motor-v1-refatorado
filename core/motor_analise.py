@@ -1,3 +1,4 @@
+# core/motor_analise.py
 from rules.no_call import MotorNoCall
 from rules.analisador import AnalisadorContextoAvancado
 from rules.contagens import MotorContagensProjetivas
@@ -135,6 +136,39 @@ class MotorAnalise:
             "detalhe": f"Forças de Controle: {ctrl_ret['controladores']} | Forças de Retardo: {ctrl_ret['retardadores']}",
             "impacto": "ALTO"
         })
+
+        # =========================================================
+        # <-- RADAR: Obter influência do Radar Numérico e adicionar ao resultado
+        # =========================================================
+        if ia_modelo is not None and hasattr(ia_modelo, 'obter_influencia_radar'):
+            try:
+                influencia_radar = ia_modelo.obter_influencia_radar(
+                    sub_num, sub_pol, analise_contexto={
+                        "geometria": geometria,
+                        "regras_posicionais": expectativas,
+                        "contexto_avancado": {"modo_mercado": modo_mercado}
+                    }
+                )
+                resultado["influencia_radar"] = influencia_radar
+                resultado["camadas"].append({
+                    "camada": 7.5,
+                    "nome": "Radar Numérico",
+                    "resultado": f"Número dominante: {influencia_radar.get('numero_dominante')} (consenso {influencia_radar.get('consenso', 0)*100:.1f}%)",
+                    "detalhe": f"Fator de influência: {influencia_radar.get('fator_influencia', 0):.3f} | Confiabilidade: {influencia_radar.get('confiabilidade', 0)*100:.1f}%",
+                    "impacto": "ALTO" if influencia_radar.get('fator_influencia', 0) >= 0.15 else "MÉDIO" if influencia_radar.get('fator_influencia', 0) >= 0.08 else "BAIXO"
+                })
+            except Exception as e:
+                resultado["influencia_radar"] = None
+                resultado["camadas"].append({
+                    "camada": 7.5,
+                    "nome": "Radar Numérico",
+                    "resultado": "INDISPONÍVEL",
+                    "detalhe": f"Erro ao obter influência do Radar: {type(e).__name__}",
+                    "impacto": "NEUTRO"
+                })
+        else:
+            resultado["influencia_radar"] = None
+
         return resultado
 
     @staticmethod
