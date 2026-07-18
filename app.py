@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 import json
 import gc
+import pandas as pd  # <-- ADICIONADO PARA O RELATÓRIO DO RADAR
 
 # ---------------------------------------------------------
 # IMPORTAÇÕES
@@ -88,6 +89,8 @@ st.markdown("""
     .stButton button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .footer { margin-top: 1.5rem; padding-top: 0.6rem; border-top: 1px solid #e9ecef; text-align: center; font-size: 0.7rem; color: #6c757d; }
     .json-container { background: #f8f9fa; padding: 0.5rem; border-radius: 6px; border: 1px solid #e9ecef; }
+    .radar-table { font-size: 0.85rem; }
+    .radar-table th { background: #f1f3f5; }
     @media (max-width: 768px) {
         .app-header h1 { font-size: 1.1rem; }
         .status-item { flex: 1 1 70px; }
@@ -173,7 +176,7 @@ aba_tipo_b, aba_feedback, aba_tipo_d, aba_padroes, aba_matematica = st.tabs([
 ])
 
 # ============================================================
-# ABA 1 — SINAL REAL (TODOS OS RELATÓRIOS RESTAURADOS)
+# ABA 1 — SINAL REAL (COM RELATÓRIO DO RADAR POSICIONADO)
 # ============================================================
 with aba_tipo_b:
     st.header("🎯 Sinal Real — Predição Neural")
@@ -241,25 +244,9 @@ with aba_tipo_b:
                             st.write(f"**Direcionamento Matemático:** {resultado.get('justificativa')}")
                             st.write(f"**Confiança Estatística da Rede:** {resultado.get('confianca_ia')}%")
 
-                            # ==========================
-                            # RELATÓRIO DO RADAR NUMÉRICO (RESTAURADO)
-                            # ==========================
-                            radar = resultado.get("radar_numerico") or resultado.get("radar") or {}
-                            with st.expander("📡 Relatório do Radar Numérico", expanded=False):
-                                if radar:
-                                    st.write("### Contexto Detectado")
-                                    for chave, valor in radar.items():
-                                        st.write(f"**{str(chave).replace('_',' ').title()}:** {valor}")
-                                else:
-                                    st.info("Esta versão do Motor V1 não retornou dados detalhados do Radar Numérico. Quando o módulo enviar essas informações, elas serão exibidas automaticamente aqui sem necessidade de novas alterações no app.")
-
-                            # ==========================
-                            # KELLY (RESTAURADO)
-                            # ==========================
-                            if resultado.get("kelly") is not None:
-                                st.success(f"💰 **Gestão de Risco (Half-Kelly Criterion):** Aporte sugerido de **{resultado.get('kelly')}% da sua banca** para esta entrada.")
-
-                    # Métricas lado a lado
+                    # =========================================================
+                    # MÉTRICAS: ENTROPIA E PROBABILIDADE MARKOV
+                    # =========================================================
                     if resultado.get("entropia") is not None:
                         col_m1, col_m2 = st.columns(2)
                         with col_m1:
@@ -269,9 +256,74 @@ with aba_tipo_b:
                             markov = resultado.get("probabilidade_markov", {"V": 0, "P": 0, "B": 0})
                             st.metric(label="Probabilidade Pura (Cadeia de Markov)", value=f"V: {markov.get('V', 0)}% | P: {markov.get('P', 0)}%")
 
-                    # ============================================================
-                    # EXPANSORES – TODOS OS RELATÓRIOS DO ORIGINAL
-                    # ============================================================
+                    # =========================================================
+                    # <-- RADAR: RELATÓRIO DO RADAR NUMÉRICO (POSICIONADO AQUI)
+                    # =========================================================
+                    radar = resultado.get("relatorio_radar")
+                    if radar:
+                        with st.expander("🎯 RADAR NUMÉRICO - Análise Contextual", expanded=True):
+                            st.markdown("### 📊 Distribuição de Probabilidades")
+                            
+                            # Tabela principal com pandas
+                            df_radar = pd.DataFrame(radar["tabela"])
+                            df_radar = df_radar.rename(columns={
+                                "numero": "Número",
+                                "base": "Base %",
+                                "recencia": "Recência %",
+                                "ao_vivo": "Ao Vivo %",
+                                "consenso": "Consenso %"
+                            })
+                            # Destacar o número dominante
+                            def highlight_dominante(row):
+                                if row["Número"] == radar["numero_dominante"]:
+                                    return ['background-color: #ffffcc'] * len(row)
+                                return [''] * len(row)
+                            st.dataframe(
+                                df_radar.style.apply(highlight_dominante, axis=1),
+                                use_container_width=True,
+                                height=400
+                            )
+                            
+                            st.markdown("---")
+                            col_r1, col_r2, col_r3 = st.columns(3)
+                            
+                            with col_r1:
+                                st.metric(
+                                    label="🏆 Número Dominante",
+                                    value=radar["numero_dominante"],
+                                    delta=f"{radar['consenso']:.1f}% de consenso"
+                                )
+                                st.caption(f"Referência teórica: {radar['referencia_teorica']:.2f}% | Multiplicador: {radar['multiplicador']:.2f}x")
+                            
+                            with col_r2:
+                                st.metric(
+                                    label="📈 Desempenho Histórico do Radar",
+                                    value=f"{radar['taxa_acerto_g0']:.1f}% G0",
+                                    delta=f"G1: {radar['taxa_acerto_g1']:.1f}% | Erro: {radar['taxa_erro']:.1f}%"
+                                )
+                                st.caption(f"Confiabilidade: {radar['confiabilidade']:.1f}% | Amostras: {radar['memoria_contagem']}")
+                            
+                            with col_r3:
+                                st.metric(
+                                    label="⚖️ Impacto na Arbitragem",
+                                    value=radar["classificacao"],
+                                    delta=f"Fator: {radar['fator_influencia']:.3f}"
+                                )
+                            
+                            st.markdown("---")
+                            st.markdown("### 🏆 Ranking dos Números Mais Prováveis")
+                            for item in radar["ranking"]:
+                                st.write(f"- {item}")
+                            
+                            st.caption("Fonte: Consenso entre Base de Longo Prazo, Recência e Sequência Ao Vivo.")
+                    else:
+                        # Se o Radar ainda não tem dados, exibe um placeholder
+                        with st.expander("🎯 RADAR NUMÉRICO - Análise Contextual", expanded=False):
+                            st.info("📡 O Radar Numérico ainda está coletando dados. Após processar algumas janelas (Base + Recência), o relatório detalhado aparecerá aqui.")
+
+                    # =========================================================
+                    # EXPANSORES – TODOS OS RELATÓRIOS DO ORIGINAL (MANTIDOS)
+                    # =========================================================
                     col_exp1, col_exp2 = st.columns(2, gap="medium")
                     
                     with col_exp1:
@@ -363,7 +415,7 @@ with aba_tipo_b:
                                 else:
                                     st.info("Nenhuma contagem projetiva de 1 a 7 foi aberta nesta janela.")
 
-                                # ===== LEITURA DE ARBITRAGEM (RESTAURADA) =====
+                                # ===== LEITURA DE ARBITRAGEM =====
                                 familias = sorted({r.get("familia", "N/D") for r in regras})
                                 st.markdown("### ⚖️ Leitura de arbitragem")
                                 st.write(f"**Famílias estruturais ativas:** {', '.join(familias) if familias else 'NENHUMA'}")
@@ -449,7 +501,7 @@ with aba_feedback:
                 st.error(f"Erro: {e}")
 
 # ============================================================
-# ABA 3 — AUDITORIA (COM RELATÓRIO DE RECÊNCIA COMPLETO)
+# ABA 3 — AUDITORIA (COM BARRAS DE CARREGAMENTO)
 # ============================================================
 with aba_tipo_d:
     st.header("📊 Auditoria Dinâmica e Treinamento")
@@ -471,28 +523,39 @@ with aba_tipo_d:
         with col_a3:
             btn_adicionar = st.button("➕ Encadear (Anexar)", use_container_width=True)
 
+        # ---------------------------------------------------------
+        # BOTÃO "INJETAR RECÊNCIA" – COM BARRA DE PROGRESSO
+        # ---------------------------------------------------------
         if btn_recencia:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
                 if dados and len(dados) >= 20:
                     with open("base_recencia_ativa.xlsx", "wb") as f_rec:
                         f_rec.write(arquivo_upload.getvalue())
+                    
+                    with st.status("⚡ Injetando recência na IA...", expanded=True) as status:
+                        st.write("📂 Lendo base de recência...")
+                        progress = st.progress(0, text="Carregando...")
+                        time.sleep(0.2)
+                        progress.progress(30, text="Integrando padrões...")
                         
-                    with st.spinner("Injetando pesos na recência e absorvendo para o Longo Prazo..."):
                         resultado = motor.processar_recencia(dados)
+                        
+                        progress.progress(80, text="Atualizando matrizes...")
+                        time.sleep(0.2)
+                        progress.progress(100, text="Concluído!")
+                        status.update(label="✅ Recência injetada com sucesso!", state="complete")
+                    
                     st.success("✅ Recência acoplada com sucesso e absorvida pela Base Mestra!")
 
-                    # === RELATÓRIO DO REGIME INJETADO (expanded=True) ===
                     if resultado and isinstance(resultado, dict) and resultado.get("regime_recencia"):
                         with st.expander("📊 Relatório de Análise do Regime Injetado", expanded=True):
                             st.json(resultado["regime_recencia"])
 
-                    # === AUDITORIA CRONOLÓGICA DAS JANELAS (LOG COMPLETO) ===
                     with st.spinner("Simulando auditoria cronológica das janelas móveis..."):
                         motor_antigo = MotorV1Completo(dados)
                         output = motor_antigo.processar_auditoria()
                     
-                    # Conta o número de janelas a partir do output
                     linhas = output.split("\n")
                     janelas = [linha for linha in linhas if "Janela" in linha]
                     num_janelas = len(janelas)
@@ -504,12 +567,26 @@ with aba_tipo_d:
             except Exception as e:
                 st.error(f"🚨 Proteção de Crash Ativada na Recência: {e}")
 
+        # ---------------------------------------------------------
+        # BOTÃO "SUBSTITUIR BASE" – COM BARRA DE PROGRESSO
+        # ---------------------------------------------------------
         if btn_substituir:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
                 if dados:
-                    with st.spinner("Substituindo a base definitiva e retreinando os modelos contextuais..."):
+                    with st.status("💾 Substituindo base definitiva...", expanded=True) as status:
+                        st.write("📂 Validando dados do arquivo...")
+                        progress = st.progress(0, text="Iniciando...")
+                        time.sleep(0.2)
+                        progress.progress(20, text="Preparando modelo...")
+                        
                         rel = motor.absorver_base_longa(dados)
+                        
+                        progress.progress(70, text="Salvando nova base...")
+                        time.sleep(0.2)
+                        progress.progress(100, text="Concluído!")
+                        status.update(label="✅ Base substituída com sucesso!", state="complete")
+                    
                     if rel and isinstance(rel, dict) and rel.get("sucesso"):
                         st.success("✅ Base definitiva substituída no XLS e modelos retreinados com sucesso!")
                         st.json(rel)
@@ -520,19 +597,25 @@ with aba_tipo_d:
             except Exception as e:
                 st.error(f"🚨 Proteção de Crash Ativada na Substituição: {e}")
 
-        # ============================================================
-        # BOTÃO "ENCADEAR" – COM st.status PARA MONITORAMENTO
-        # ============================================================
+        # ---------------------------------------------------------
+        # BOTÃO "ENCADEAR (ANEXAR)" – COM BARRA DE PROGRESSO
+        # ---------------------------------------------------------
         if btn_adicionar:
             try:
                 dados = LeitorXLS(caminho_temp).ler_e_validar()
                 if dados:
                     with st.status("⏳ Processando lote incremental...", expanded=True) as status:
                         st.write("📂 Lendo dados do arquivo...")
-                        time.sleep(0.1)  # pequena pausa para a mensagem aparecer
+                        progress = st.progress(0, text="Iniciando...")
+                        time.sleep(0.1)
+                        progress.progress(20, text="Executando auditoria ativa...")
                         
-                        st.write("🧠 Executando encadeamento dinâmico (auditoria ativa)...")
+                        st.write("🧠 Executando encadeamento dinâmico...")
                         rel = motor.processar_novo_lote(dados)
+                        
+                        progress.progress(80, text="Persistindo modelo...")
+                        time.sleep(0.1)
+                        progress.progress(100, text="Concluído!")
                         
                         if rel and isinstance(rel, dict) and rel.get("sucesso"):
                             status.update(label="✅ Encadeamento concluído!", state="complete")
