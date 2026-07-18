@@ -1,3 +1,4 @@
+# core/juiz_hierarquico.py
 from utils.helpers import hash_chave
 
 class JuizHierarquicoModificado:
@@ -87,7 +88,8 @@ class JuizHierarquicoModificado:
                        modo_mercado="NEUTRO",
                        streak_atual=0, xadrez_len=0, xadrez_quebrou=False,
                        contexto_exaustao=False, sintese_evidencias=None,
-                       probabilidade_markov=None, ia_modelo=None, entropia_shannon=0.0):
+                       probabilidade_markov=None, ia_modelo=None, entropia_shannon=0.0,
+                       influencia_radar=None):  # <-- RADAR: novo parâmetro
         # NÍVEL 1 — NO CALL é soberano.
         if no_call_ativo:
             return "NO CALL", motivo_nc, "SISTEMA_TRAVADO"
@@ -239,6 +241,42 @@ class JuizHierarquicoModificado:
                 "Ausência de autoridade hierárquica válida. "
                 "O sistema recusou votação/confluência."
             ), "FALLBACK_NO_CALL_HIERARQUIA"
+
+        # =========================================================
+        # <-- RADAR: Aplicar influência do Radar sobre a decisão preliminar
+        # =========================================================
+        if influencia_radar is not None and ia_modelo is not None:
+            fator = float(influencia_radar.get("fator_influencia", 0.0))
+            if fator != 0.0:
+                # Obter autoridade da regra vencedora
+                autoridade_vencedora = 0.0
+                if hasattr(ia_modelo, "_autoridade_evolutiva_regra"):
+                    autoridade_vencedora = float(ia_modelo._autoridade_evolutiva_regra(regra_preliminar) or 0.0)
+                # Se o Radar é contrário e a autoridade é baixa, pode vetar
+                if fator < 0 and autoridade_vencedora < 0.35 and abs(fator) >= 0.15:
+                    return (
+                        "NO CALL",
+                        f"Veto do Radar Numérico: O Radar detecta oposição robusta "
+                        f"(fator {fator:.3f}) contra a direção {sinal_preliminar} "
+                        f"e a autoridade da regra vencedora é baixa ({autoridade_vencedora:.3f}). "
+                        f"Número dominante: {influencia_radar.get('numero_dominante')} com consenso {influencia_radar.get('consenso', 0)*100:.1f}%. "
+                        "A operação foi convertida em NO CALL para proteger o saldo.",
+                        "NO_CALL_RADAR_OPOSICAO_ROBUSTA"
+                    )
+                # Se o Radar favorece, adiciona ao motivo
+                elif fator > 0:
+                    motivo_preliminar += (
+                        f" | Radar favorece (fator {fator:.3f}) - "
+                        f"número dominante {influencia_radar.get('numero_dominante')} "
+                        f"com consenso {influencia_radar.get('consenso', 0)*100:.1f}%"
+                    )
+                else:
+                    # Radar contrário mas não forte o suficiente para vetar
+                    motivo_preliminar += (
+                        f" | Radar se opõe levemente (fator {fator:.3f}) - "
+                        f"número dominante {influencia_radar.get('numero_dominante')} "
+                        f"com consenso {influencia_radar.get('consenso', 0)*100:.1f}%"
+                    )
 
         # MAIN 139 — correção direcional por oposição causal consolidada.
         # A hierarquia continua escolhendo o candidato inicial. CONTAGENS segue
@@ -505,6 +543,3 @@ class JuizHierarquicoModificado:
             }
 
         return sinal_preliminar, motivo_preliminar, regra_preliminar
-
-
-        pass
