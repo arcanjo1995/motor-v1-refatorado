@@ -1,3 +1,4 @@
+# ml_engine/preditor_base.py
 import os
 import json
 import time
@@ -16,6 +17,7 @@ from .machine_learning import MachineLearningMixin
 from .evolucao import EvolucaoMixin
 from .comportamento import ComportamentoMixin
 from .probabilidades import ProbabilidadesMixin
+from .radar_numerico import RadarNumericoMixin  # <-- RADAR
 
 # Utilitários e Configurações necessárias
 from config.settings import VERSAO_CHAVES_HASH, HAS_ML
@@ -41,7 +43,8 @@ class IAPreditivaV1(
     MachineLearningMixin,
     EvolucaoMixin, 
     ComportamentoMixin, 
-    ProbabilidadesMixin
+    ProbabilidadesMixin,
+    RadarNumericoMixin   # <-- RADAR
 ):
     """
     O Cérebro Central do Motor V1. 
@@ -306,6 +309,9 @@ class IAPreditivaV1(
             "peso_recencia_oficial_alterado": False
         }
 
+        # <-- RADAR: inicialização da memória do Radar
+        self._inicializar_memoria_radar()
+
         self._treinar_modelo_profundo()
 
     def __getstate__(self):
@@ -410,6 +416,14 @@ class IAPreditivaV1(
                     int(ordem): {chave: dict(stats) for chave, stats in tabela.items()}
                     for ordem, tabela in state[nome_temporal].items()
                 }
+
+        # <-- RADAR: serialização da memória e configurações do Radar
+        if 'memoria_radar' in state:
+            state['memoria_radar'] = dict(state['memoria_radar'])
+        if 'pesos_radar' in state:
+            state['pesos_radar'] = dict(state['pesos_radar'])
+        if 'config_radar' in state:
+            state['config_radar'] = dict(state['config_radar'])
 
         # Persistir os modelos ML é intencional: versões anteriores removiam
         # ml_gb/ml_mlp/ml_hmm do pickle e o app perdia a camada neural no reboot.
@@ -864,6 +878,39 @@ class IAPreditivaV1(
             if chave_config in risco_config_salvo and chave_config != "versao":
                 self.risco_g2_mais_config[chave_config] = risco_config_salvo[chave_config]
         self.risco_g2_mais_config["versao"] = 2
+
+        # <-- RADAR: restaura memória e configurações do Radar
+        if 'memoria_radar' not in self.__dict__:
+            self._inicializar_memoria_radar()
+        else:
+            self.memoria_radar = defaultdict(lambda: {
+                "total": 0,
+                "acertos_g0": 0,
+                "acertos_g1": 0,
+                "erros": 0,
+                "historico_numeros": defaultdict(int),
+                "acertos_g0_por_numero": defaultdict(int),
+                "acertos_g1_por_numero": defaultdict(int),
+                "erros_por_numero": defaultdict(int),
+                "fonte_base_acertos": 0,
+                "fonte_recencia_acertos": 0,
+                "fonte_ao_vivo_acertos": 0,
+            }, self.memoria_radar)
+        if not hasattr(self, 'pesos_radar'):
+            self.pesos_radar = {"base": 0.40, "recencia": 0.35, "ao_vivo": 0.25}
+        if not hasattr(self, 'config_radar'):
+            self.config_radar = {
+                "versao": 1,
+                "aprendizado_continuo": True,
+                "pesos_adaptativos": False,
+                "minimo_amostras_para_peso": 30,
+                "limiar_ameaca_critica": 3.0,
+                "limiar_ameaca_alta": 2.0,
+                "limiar_ameaca_media": 1.5,
+                "influencia_maxima": 0.25,
+                "influencia_minima": 0.05,
+            }
+
         return state
 
     def _treinar_modelo_profundo(self):
@@ -886,6 +933,26 @@ class IAPreditivaV1(
             self._validar_competencia_camadas_ampliadas_cronologica(todos_dados)
             self._treinar_risco_g2_mais_base_longa()
             self._treinar_ml_avancado(todos_dados)
+
+            # <-- RADAR: treinar Radar sobre toda a base (aprendizado contínuo)
+            if len(todos_dados) >= 13:
+                nums = [int(d.get("numero")) for d in todos_dados]
+                pol = [str(d.get("cor", "B")).upper() for d in todos_dados]
+                for i in range(11, len(todos_dados) - 2):
+                    sub_num = nums[i-11:i+1]
+                    sub_pol = pol[i-11:i+1]
+                    g0 = int(todos_dados[i+1].get("numero", -1))
+                    g1 = int(todos_dados[i+2].get("numero", -1)) if i+2 < len(todos_dados) else None
+                    if g0 < 0:
+                        continue
+                    try:
+                        # Usa MotorAnalise para obter contexto (se disponível)
+                        from core.motor_analise import MotorAnalise
+                        analise = MotorAnalise.analisar_janela(sub_num, sub_pol, self, eh_sinal_real=False)
+                        self._treinar_radar_em_janela(sub_num, sub_pol, g0, g1, analise)
+                    except Exception as e:
+                        # Fallback: treina sem contexto
+                        self._treinar_radar_em_janela(sub_num, sub_pol, g0, g1, None)
 
     def construir_cadeia_causal_consequencia(self, sub_num, sub_pol, expectativas=None):
         """
