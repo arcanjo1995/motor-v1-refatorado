@@ -3,6 +3,7 @@ import os
 import gc
 import pandas as pd
 from datetime import datetime
+from collections import defaultdict  # <-- ADICIONADO PARA O RADAR RECÊNCIA
 
 from config.settings import NOME_BASE_DEFINITIVA
 from data.leitor_xls import LeitorXLS
@@ -99,6 +100,106 @@ class MotorUnificadoV1:
                         self.ia._treinar_radar_em_janela(sub_num, sub_pol, g0, g1, None)
             except Exception as e:
                 print(f"[RADAR] Erro ao treinar Radar com recência: {e}")
+
+        # <-- RECÊNCIA: calcular taxas de acerto na recência para todas as fontes
+        self._calcular_taxas_recencia()
+
+    def _calcular_taxas_recencia(self):
+        """
+        Calcula e armazena as taxas de acerto na recência para todas as fontes.
+        Usado pelo Consenso Ponderado por Evidência (PDE).
+        """
+        if self.ia is None or not hasattr(self.ia, "dados_recencia"):
+            return
+
+        dados_rec = self.ia.dados_recencia[-200:]
+        if len(dados_rec) < 20:
+            return
+
+        # Inicializar estruturas no ia
+        if not hasattr(self.ia, "regras_competencia_recencia"):
+            self.ia.regras_competencia_recencia = {}
+        if not hasattr(self.ia, "projecoes_respeito_recencia"):
+            self.ia.projecoes_respeito_recencia = {}
+        if not hasattr(self.ia, "radar_recencia"):
+            self.ia.radar_recencia = defaultdict(lambda: {"total": 0, "acertos": 0})
+        if not hasattr(self.ia, "ia_recencia"):
+            self.ia.ia_recencia = {"total": 0, "acertos": 0}
+        if not hasattr(self.ia, "markov_recencia"):
+            self.ia.markov_recencia = {"total": 0, "erro_absoluto": 0.0}
+
+        from core.motor_analise import MotorAnalise
+
+        for i in range(11, len(dados_rec) - 2):
+            sub_num = [int(d["numero"]) for d in dados_rec[i-11:i+1]]
+            sub_pol = [d["cor"] for d in dados_rec[i-11:i+1]]
+            c0 = dados_rec[i+1]["cor"]
+            c1 = dados_rec[i+2]["cor"]
+
+            # Analisar janela
+            analise = MotorAnalise.analisar_janela(sub_num, sub_pol, self.ia, eh_sinal_real=True)
+            if analise["no_call"]["ativo"]:
+                continue
+
+            # 1. Regras ativas
+            regras = analise.get("regras_posicionais", [])
+            for regra in regras:
+                tipo = regra.get("tipo_regra", "")
+                direcao = regra.get("direcao")
+                if direcao not in ("VERMELHO", "PRETO"):
+                    continue
+                letra = "V" if direcao == "VERMELHO" else "P"
+                acertou = c0 in (letra, "B") or c1 in (letra, "B")
+                stats = self.ia.regras_competencia_recencia.setdefault(tipo, {"total": 0, "acertos": 0})
+                stats["total"] += 1
+                if acertou:
+                    stats["acertos"] += 1
+
+            # 2. Radar: prever número e verificar acerto
+            if hasattr(self.ia, "_prever_numero_radar"):
+                try:
+                    previsao = self.ia._prever_numero_radar(sub_num, sub_pol, analise)
+                    numero_previsto = previsao.get("numero_dominante")
+                    if numero_previsto is not None:
+                        g0 = int(dados_rec[i+1]["numero"])
+                        g1 = int(dados_rec[i+2]["numero"])
+                        acertou = (g0 == numero_previsto) or (g1 == numero_previsto)
+                        stats = self.ia.radar_recencia[numero_previsto]
+                        stats["total"] += 1
+                        if acertou:
+                            stats["acertos"] += 1
+                except Exception:
+                    pass
+
+            # 3. IA observacional
+            if hasattr(self.ia, "predizer_proxima_casa"):
+                try:
+                    direcao_ia, conf, _ = self.ia.predizer_proxima_casa(sub_num, sub_pol, analise)
+                    if direcao_ia in ("VERMELHO", "PRETO"):
+                        letra = "V" if direcao_ia == "VERMELHO" else "P"
+                        acertou = c0 in (letra, "B") or c1 in (letra, "B")
+                        self.ia.ia_recencia["total"] += 1
+                        if acertou:
+                            self.ia.ia_recencia["acertos"] += 1
+                except Exception:
+                    pass
+
+            # 4. Markov: erro médio (diferença entre probabilidade prevista e real)
+            if hasattr(self.ia, "calcular_probabilidade_exata_markov"):
+                try:
+                    prob = self.ia.calcular_probabilidade_exata_markov(sub_pol)
+                    v = float(prob.get("V", 0.0)) / 100.0
+                    p = float(prob.get("P", 0.0)) / 100.0
+                    if c0 == "V" or c1 == "V":
+                        erro = 1.0 - v
+                    elif c0 == "P" or c1 == "P":
+                        erro = 1.0 - p
+                    else:
+                        erro = 0.0
+                    self.ia.markov_recencia["total"] += 1
+                    self.ia.markov_recencia["erro_absoluto"] += erro
+                except Exception:
+                    pass
 
     def absorver_base_longa(self, dados_novos):
         if not dados_novos or len(dados_novos) < 30:
@@ -197,6 +298,9 @@ class MotorUnificadoV1:
             except Exception as e:
                 print(f"[RADAR] Erro ao treinar Radar com recência processada: {e}")
 
+        # <-- RECÊNCIA: calcular taxas de acerto na recência para todas as fontes
+        self._calcular_taxas_recencia()
+
         return {
             "sucesso": True,
             "registros_processados": len(dados_recencia),
@@ -246,7 +350,7 @@ class MotorUnificadoV1:
             xadrez_quebrou=xadrez_quebrou,
             contexto_exaustao=contexto_exaustao, probabilidade_markov=analise.get("probabilidade_markov"),
             ia_modelo=self.ia, entropia_shannon=analise.get("entropia", 0.0),
-            influencia_radar=analise.get("influencia_radar")  # <-- RADAR: passa influência
+            influencia_radar=analise.get("influencia_radar")
         )
         validacao_contextual = getattr(self.ia, "_ultima_validacao_autoridade_contextual", {}) or {}
         if validacao_contextual.get("ativo"):
@@ -292,7 +396,6 @@ class MotorUnificadoV1:
             justificativa_final = f"Veto de streak {streak}x (segurança anti-tendência)"
             regra_id_final = "VETO_STREAK"
 
-        # <-- RADAR: gerar relatório detalhado do Radar se disponível
         relatorio_radar = None
         if self.ia is not None and hasattr(self.ia, 'gerar_relatorio_radar'):
             try:
@@ -316,7 +419,7 @@ class MotorUnificadoV1:
             "validacao_contextual_autoridade": getattr(self.ia, "_ultima_validacao_autoridade_contextual", {}),
             "oposicao_causal_consolidada": getattr(self.ia, "_ultima_oposicao_causal_consolidada", {}),
             "auditoria_contrafactual_autorizacao": getattr(self.ia, "auditoria_contrafactual_autorizacao", {}),
-            "relatorio_radar": relatorio_radar,  # <-- RADAR
+            "relatorio_radar": relatorio_radar,
             "decisao_final": {
                 "sinal": sinal_final,
                 "justificativa": justificativa_final,
@@ -461,7 +564,6 @@ class MotorUnificadoV1:
         cronologia_ao_vivo_atual = list(getattr(self.ia, "cronologia_ao_vivo", []) or [])
         rel = adicionar_a_base_longo_prazo(dados_novos_para_arquivo, origem_feedback_ao_vivo=True)
 
-        # <-- RADAR: processar feedback para o Radar
         if self.ia is not None and hasattr(self.ia, '_processar_feedback_radar'):
             try:
                 self.ia._processar_feedback_radar(
